@@ -15,7 +15,7 @@ pub fn npm() -> Result<NpmAudit, String> {
     parse_npm_json(&stdout)
 }
 
-fn parse_npm_json(stdout: &str) -> Result<NpmAudit, String> {
+pub fn parse_npm_json(stdout: &str) -> Result<NpmAudit, String> {
     if stdout.trim().is_empty() {
         return Err("npm audit produced empty output".to_string());
     }
@@ -29,7 +29,7 @@ mod tests {
     use std::fs;
 
     #[test]
-    fn parses_real_npm_audit_fixture() {
+    fn parses_npm_audit_fixture() {
         let json =
             fs::read_to_string("tests/fixtures/npm-audit.json").expect("failed to read fixture");
 
