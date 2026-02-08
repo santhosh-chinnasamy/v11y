@@ -9,14 +9,14 @@ pub struct NpmAudit {
     pub vulnerabilities: HashMap<String, NpmVulnerability>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 
 pub struct Metadata {
     pub dependencies: DependencyCount,
     pub vulnerabilities: VulnerabilityCount,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 pub struct DependencyCount {
     pub dev: u32,
     pub optional: u32,
@@ -27,7 +27,7 @@ pub struct DependencyCount {
     pub total: u32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 pub struct VulnerabilityCount {
     pub critical: u32,
     pub high: u32,
