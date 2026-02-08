@@ -1,5 +1,5 @@
-use std::{path::Path, process::Command};
 use crate::model::NpmAudit;
+use std::{path::Path, process::Command};
 
 pub fn audit_npm() -> Result<NpmAudit, String> {
     let path = Path::new("/Users/santhoshc/learn/expense-tracker");
