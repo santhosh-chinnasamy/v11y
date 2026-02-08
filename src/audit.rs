@@ -1,7 +1,7 @@
 use crate::model::NpmAudit;
 use std::{path::Path, process::Command};
 
-pub fn audit_npm() -> Result<NpmAudit, String> {
+pub fn npm() -> Result<NpmAudit, String> {
     let path = Path::new("/Users/santhoshc/learn/expense-tracker");
 
     let output = Command::new("npm")
@@ -12,14 +12,36 @@ pub fn audit_npm() -> Result<NpmAudit, String> {
         .map_err(|e| format!("Failed to execute npm audit: {}", e))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
+    parse_npm_json(&stdout)
+}
 
+fn parse_npm_json(stdout: &str) -> Result<NpmAudit, String> {
     if stdout.trim().is_empty() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("npm audit produced no output: {}", stderr));
+        return Err("npm audit produced empty output".to_string());
     }
 
-    let json_output = serde_json::from_str(&stdout)
-        .map_err(|e| format!("Failed to parse npm audit JSON: {}", e))?;
+    serde_json::from_str(stdout).map_err(|e| format!("Failed to parse npm audit JSON: {}", e))
+}
 
-    Ok(json_output)
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn parses_real_npm_audit_fixture() {
+        let json =
+            fs::read_to_string("tests/fixtures/npm-audit.json").expect("failed to read fixture");
+
+        let audit = parse_npm_json(&json).expect("failed to parse npm audit JSON");
+
+        assert!(!audit.vulnerabilities.is_empty());
+        assert!(audit.metadata.vulnerabilities.total == 13);
+    }
+
+    #[test]
+    fn empty_output_is_error() {
+        let err = parse_npm_json("").unwrap_err();
+        assert!(err.contains("empty"));
+    }
 }
