@@ -1,16 +1,16 @@
 use crate::model::{NpmAudit, ViaEntry};
 
 #[derive(Debug)]
-struct PackageRisk {
-    name: String,
-    is_direct: bool,
-    max_severity: Severity,
-    vulnerability_count: usize,
-    has_fix: bool,
+pub struct PackageRisk {
+    pub name: String,
+    pub is_direct: bool,
+    pub max_severity: Severity,
+    pub vulnerability_count: usize,
+    pub has_fix: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-enum Severity {
+pub enum Severity {
     Low,
     Moderate,
     High,
@@ -29,7 +29,7 @@ impl Severity {
     }
 }
 
-fn build_package_risk(audit: NpmAudit) -> Vec<PackageRisk> {
+pub fn build_package_risk(audit: NpmAudit) -> Vec<PackageRisk> {
     let mut result = Vec::new();
 
     for (pkg_name, vulns) in audit.vulnerabilities {
@@ -56,7 +56,6 @@ fn build_package_risk(audit: NpmAudit) -> Vec<PackageRisk> {
         });
     }
 
-    println!("{:#?}", &result);
     result
 }
 
@@ -69,11 +68,32 @@ fn max_severity(via: &[ViaEntry]) -> Option<Severity> {
         .max()
 }
 
+pub fn risk_score(pkg: &PackageRisk) -> i32 {
+    let mut score = match pkg.max_severity {
+        Severity::Critical => 100,
+        Severity::High => 60,
+        Severity::Moderate => 30,
+        Severity::Low => 10,
+    };
+
+    if pkg.is_direct {
+        score += 20
+    }
+
+    if pkg.has_fix {
+        score += 10
+    } else {
+        score -= 20
+    }
+
+    score
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{fs, slice::RSplit};
     use crate::audit::parse_npm_json;
+    use std::{fs, slice::RSplit};
 
     #[test]
     fn severity_ordering_is_correct() {
@@ -176,5 +196,26 @@ mod tests {
         assert_eq!(vite.vulnerability_count, 11);
         assert_eq!(vite.max_severity, Severity::Moderate);
         assert!(vite.is_direct);
+    }
+
+    #[test]
+    fn higher_severity_and_direct_dependency_scores_higher() {
+        let low_transitive = PackageRisk {
+            name: "low".into(),
+            is_direct: false,
+            max_severity: Severity::Low,
+            vulnerability_count: 1,
+            has_fix: true,
+        };
+
+        let high_direct = PackageRisk {
+            name: "high".into(),
+            is_direct: true,
+            max_severity: Severity::High,
+            vulnerability_count: 1,
+            has_fix: true,
+        };
+
+        assert!(risk_score(&high_direct) > risk_score(&low_transitive));
     }
 }
