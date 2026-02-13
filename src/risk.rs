@@ -89,6 +89,22 @@ pub fn risk_score(pkg: &PackageRisk) -> i32 {
     score
 }
 
+pub fn filter_risks(
+    risks: Vec<PackageRisk>,
+    min_severity: Severity,
+    is_direct: bool,
+    has_fix: bool,
+) -> Vec<PackageRisk> {
+    let filtered_risk = risks
+        .into_iter()
+        .filter(|pkg| {
+            pkg.max_severity >= min_severity && pkg.is_direct == is_direct && pkg.has_fix == has_fix
+        })
+        .collect();
+
+    filtered_risk
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
