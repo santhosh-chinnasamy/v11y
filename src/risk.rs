@@ -1,4 +1,7 @@
+use core::fmt;
+
 use crate::model::{NpmAudit, ViaEntry};
+use clap::ValueEnum;
 
 #[derive(Debug)]
 pub struct PackageRisk {
@@ -9,12 +12,25 @@ pub struct PackageRisk {
     pub has_fix: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 pub enum Severity {
     Low,
     Moderate,
     High,
     Critical,
+}
+
+impl fmt::Display for Severity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let value = match self {
+            Severity::Low => "low",
+            Severity::Moderate => "moderate",
+            Severity::High => "high",
+            Severity::Critical => "critical",
+        };
+
+        write!(f, "{}", value)
+    }
 }
 
 impl Severity {
@@ -92,17 +108,15 @@ pub fn risk_score(pkg: &PackageRisk) -> i32 {
 pub fn filter_risks(
     risks: Vec<PackageRisk>,
     min_severity: Severity,
-    is_direct: bool,
-    has_fix: bool,
+    only_direct: bool,
+    only_fixable: bool,
 ) -> Vec<PackageRisk> {
-    let filtered_risk = risks
+    risks
         .into_iter()
-        .filter(|pkg| {
-            pkg.max_severity >= min_severity && pkg.is_direct == is_direct && pkg.has_fix == has_fix
-        })
-        .collect();
-
-    filtered_risk
+        .filter(|pkg| pkg.max_severity >= min_severity)
+        .filter(|pkg| !only_direct || pkg.is_direct)
+        .filter(|pkg| !only_fixable || pkg.has_fix)
+        .collect()
 }
 
 #[cfg(test)]
@@ -110,6 +124,32 @@ mod tests {
     use super::*;
     use crate::audit::parse_npm_json;
     use std::{fs, slice::RSplit};
+
+    fn sample_risks() -> Vec<PackageRisk> {
+        vec![
+            PackageRisk {
+                name: "direct-fixable-high".into(),
+                is_direct: true,
+                max_severity: Severity::High,
+                vulnerability_count: 2,
+                has_fix: true,
+            },
+            PackageRisk {
+                name: "direct-notfixable-high".into(),
+                is_direct: true,
+                max_severity: Severity::High,
+                vulnerability_count: 1,
+                has_fix: false,
+            },
+            PackageRisk {
+                name: "transitive-fixable-low".into(),
+                is_direct: false,
+                max_severity: Severity::Low,
+                vulnerability_count: 1,
+                has_fix: true,
+            },
+        ]
+    }
 
     #[test]
     fn severity_ordering_is_correct() {
@@ -233,5 +273,67 @@ mod tests {
         };
 
         assert!(risk_score(&high_direct) > risk_score(&low_transitive));
+    }
+
+    #[test]
+    fn severity_display_is_correct() {
+        assert_eq!(Severity::Low.to_string(), "low");
+        assert_eq!(Severity::Moderate.to_string(), "moderate");
+        assert_eq!(Severity::High.to_string(), "high");
+        assert_eq!(Severity::Critical.to_string(), "critical");
+    }
+
+    #[test]
+    fn no_filters_returns_all_packages() {
+        let risks = sample_risks();
+
+        let filtered = filter_risks(
+            risks,
+            Severity::Low,
+            false, // only_direct
+            false, // only_fixable
+        );
+
+        assert_eq!(filtered.len(), 3);
+    }
+
+    #[test]
+    fn only_fixable_filters_correctly() {
+        let risks = sample_risks();
+
+        let filtered = filter_risks(
+            risks,
+            Severity::Low,
+            false,
+            true, // only_fixable
+        );
+
+        assert_eq!(filtered.len(), 2);
+        assert!(filtered.iter().all(|r| r.has_fix));
+    }
+
+    #[test]
+    fn only_direct_filters_correctly() {
+        let risks = sample_risks();
+
+        let filtered = filter_risks(
+            risks,
+            Severity::Low,
+            true, // only_direct
+            false,
+        );
+
+        assert_eq!(filtered.len(), 2);
+        assert!(filtered.iter().all(|r| r.is_direct));
+    }
+
+    #[test]
+    fn severity_filter_applies_independently() {
+        let risks = sample_risks();
+
+        let filtered = filter_risks(risks, Severity::High, false, false);
+
+        assert_eq!(filtered.len(), 2);
+        assert!(filtered.iter().all(|r| r.max_severity >= Severity::High));
     }
 }
