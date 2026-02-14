@@ -123,7 +123,7 @@ pub fn filter_risks(
 mod tests {
     use super::*;
     use crate::audit::parse_npm_json;
-    use std::{fs, slice::RSplit};
+    use std::fs;
 
     fn sample_risks() -> Vec<PackageRisk> {
         vec![

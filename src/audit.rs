@@ -1,13 +1,10 @@
 use crate::model::NpmAudit;
-use std::{path::Path, process::Command};
+use std::process::Command;
 
 pub fn npm() -> Result<NpmAudit, String> {
-    let path = Path::new("/Users/santhoshc/learn/expense-tracker");
-
     let output = Command::new("npm")
         .arg("audit")
         .arg("--json")
-        .current_dir(path)
         .output()
         .map_err(|e| format!("Failed to execute npm audit: {}", e))?;
 

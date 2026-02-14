@@ -25,5 +25,5 @@ fn main() {
         args.only_fixable,
     );
     filtered_risks.sort_by_key(|pkg| Reverse(risk::risk_score(pkg)));
-    println!("length: {}, {:#?}", filtered_risks.len(), filtered_risks);
+    println!("{:#?}, length: {}", filtered_risks, filtered_risks.len());
 }
