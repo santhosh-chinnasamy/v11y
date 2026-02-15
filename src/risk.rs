@@ -347,4 +347,105 @@ mod tests {
         assert_eq!(filtered.len(), 2);
         assert!(filtered.iter().all(|r| r.max_severity >= Severity::High));
     }
+
+    #[test]
+    fn sort_by_priority_orders_highest_risk_first() {
+        let risks = vec![
+            PackageRisk {
+                name: "low".into(),
+                is_direct: false,
+                max_severity: Severity::Low,
+                vulnerability_count: 1,
+                has_fix: true,
+            },
+            PackageRisk {
+                name: "critical".into(),
+                is_direct: true,
+                max_severity: Severity::Critical,
+                vulnerability_count: 5,
+                has_fix: false,
+            },
+            PackageRisk {
+                name: "high".into(),
+                is_direct: true,
+                max_severity: Severity::High,
+                vulnerability_count: 2,
+                has_fix: false,
+            },
+        ];
+
+        let sorted = sort_by_priority(risks);
+
+        assert_eq!(sorted[0].name, "critical");
+        assert_eq!(sorted[1].name, "high");
+        assert_eq!(sorted[2].name, "low");
+    }
+
+    #[test]
+    fn sort_by_priority_handles_empty_vec() {
+        let risks: Vec<PackageRisk> = vec![];
+        let sorted = sort_by_priority(risks);
+        assert_eq!(sorted.len(), 0);
+    }
+
+    #[test]
+    fn risk_score_no_fix_penalty() {
+        let with_fix = PackageRisk {
+            name: "pkg1".into(),
+            is_direct: true,
+            max_severity: Severity::High,
+            vulnerability_count: 1,
+            has_fix: true,
+        };
+
+        let without_fix = PackageRisk {
+            name: "pkg2".into(),
+            is_direct: true,
+            max_severity: Severity::High,
+            vulnerability_count: 1,
+            has_fix: false,
+        };
+
+        // Score difference should be 30 (10 for has_fix vs -20 for no fix)
+        assert_eq!(risk_score(&with_fix) - risk_score(&without_fix), 30);
+    }
+
+    #[test]
+    fn filter_combined_all_criteria() {
+        let risks = vec![
+            PackageRisk {
+                name: "match".into(),
+                is_direct: true,
+                max_severity: Severity::Critical,
+                vulnerability_count: 1,
+                has_fix: true,
+            },
+            PackageRisk {
+                name: "indirect".into(),
+                is_direct: false,
+                max_severity: Severity::Critical,
+                vulnerability_count: 1,
+                has_fix: true,
+            },
+            PackageRisk {
+                name: "no-fix".into(),
+                is_direct: true,
+                max_severity: Severity::Critical,
+                vulnerability_count: 1,
+                has_fix: false,
+            },
+            PackageRisk {
+                name: "low-severity".into(),
+                is_direct: true,
+                max_severity: Severity::Low,
+                vulnerability_count: 1,
+                has_fix: true,
+            },
+        ];
+
+        let filtered = filter_risks(risks, Severity::High, true, true);
+
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].name, "match");
+    }
 }

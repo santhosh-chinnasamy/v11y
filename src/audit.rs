@@ -41,4 +41,21 @@ mod tests {
         let err = parse_npm_json("").unwrap_err();
         assert!(err.contains("empty"));
     }
+
+    #[test]
+    fn test_invalid_json_returns_error() {
+        let result = parse_npm_json("{invalid json");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("parse"));
+    }
+
+    #[test]
+    fn test_parse_with_whitespace() {
+        let json =
+            fs::read_to_string("tests/fixtures/npm-audit.json").expect("failed to read fixture");
+        let with_whitespace = format!("\n\n  {}  \n", json);
+
+        let audit = parse_npm_json(&with_whitespace).expect("should handle whitespace");
+        assert!(!audit.vulnerabilities.is_empty());
+    }
 }
