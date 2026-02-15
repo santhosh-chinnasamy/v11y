@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::collections::HashMap;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct NpmAudit {
     #[serde(rename = "auditReportVersion")]
     pub audit_report_version: u8,
@@ -9,14 +9,14 @@ pub struct NpmAudit {
     pub vulnerabilities: HashMap<String, NpmVulnerability>,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, Clone)]
 
 pub struct Metadata {
     pub dependencies: DependencyCount,
     pub vulnerabilities: VulnerabilityCount,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, Clone)]
 pub struct DependencyCount {
     pub dev: u32,
     pub optional: u32,
@@ -27,7 +27,7 @@ pub struct DependencyCount {
     pub total: u32,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, Clone)]
 pub struct VulnerabilityCount {
     pub critical: u32,
     pub high: u32,
@@ -37,7 +37,7 @@ pub struct VulnerabilityCount {
     pub total: u32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct NpmVulnerability {
     pub name: String,
 
@@ -56,7 +56,7 @@ pub struct NpmVulnerability {
     pub via: Vec<ViaEntry>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(untagged)]
 pub enum ViaEntry {
     /// Transitive dependency
@@ -66,7 +66,7 @@ pub enum ViaEntry {
     Advisory(ViaAdvisory),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct ViaAdvisory {
     pub name: String,
     pub severity: String,
