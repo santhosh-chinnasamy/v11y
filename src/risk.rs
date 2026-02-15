@@ -1,4 +1,5 @@
 use core::fmt;
+use std::cmp::Reverse;
 
 use crate::model::{NpmAudit, ViaEntry};
 use clap::ValueEnum;
@@ -84,6 +85,11 @@ fn max_severity(via: &[ViaEntry]) -> Option<Severity> {
         .max()
 }
 
+/// Risk score calculation:
+/// - Base: Critical=100, High=60, Moderate=30, Low=10
+/// - +20 if direct dependency
+/// - +10 if fix available
+/// - -20 if no fix available
 pub fn risk_score(pkg: &PackageRisk) -> i32 {
     let mut score = match pkg.max_severity {
         Severity::Critical => 100,
@@ -103,6 +109,11 @@ pub fn risk_score(pkg: &PackageRisk) -> i32 {
     }
 
     score
+}
+
+pub fn sort_by_priority(mut risks: Vec<PackageRisk>) -> Vec<PackageRisk> {
+    risks.sort_by_key(|pkg| Reverse(risk_score(pkg)));
+    risks
 }
 
 pub fn filter_risks(
@@ -238,7 +249,7 @@ mod tests {
     }
 
     #[test]
-    fn builds_package_risk_from_actual_json() {
+    fn builds_package_risk_from_audit_fixture() {
         let json =
             fs::read_to_string("tests/fixtures/npm-audit.json").expect("failed to read fixture");
 
