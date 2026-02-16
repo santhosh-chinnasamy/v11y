@@ -15,7 +15,7 @@ pub struct Args {
     #[arg(long)]
     pub only_fixable: bool,
 
-    #[arg(long, short = 'i', default_value_t = InterfaceMode::Terminal)]
+    #[arg(long, short = 'i', default_value_t = InterfaceMode::Tui)]
     pub interface: InterfaceMode,
 }
 
