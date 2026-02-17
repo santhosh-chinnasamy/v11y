@@ -4,7 +4,7 @@ use crate::risk::Severity;
 use clap::{Parser, ValueEnum};
 
 #[derive(Debug, Parser)]
-#[command(name = "deptriage")]
+#[command(name = "v11y", version, about, author, long_about = None)]
 pub struct Args {
     #[arg(long)]
     pub only_direct: bool,

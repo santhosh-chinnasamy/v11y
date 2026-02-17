@@ -1,10 +1,17 @@
 [package]
-name = "deptriage"
+name = "v11y"
+description = "Vulnerability scanner"
 version = "0.1.0"
 edition = "2024"
+license = "MIT"
+readme = "README.md"
+authors = ["Santhosh Chinnasamy"]
+keywords = ["v11y", "vulnerability audit"]
+homepage = "https://github.com/santhosh-chinnasamy/v11y.git"
+repository = "https://github.com/santhosh-chinnasamy/v11y.git"
 
 [dependencies]
-clap = { version = "4.5.58", features = ["derive"] }
+clap = { version = "4.5.59", features = ["derive"] }
 color-eyre = "0.6.5"
 comfy-table = "7.2.2"
 ratatui = "0.30.0"
