@@ -48,6 +48,34 @@ impl App {
             should_quit: false,
         }
     }
+
+    fn next(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i >= self.risks.len() - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+
+    fn previous(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    self.risks.len() - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
 }
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<()> {
@@ -71,6 +99,8 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
 fn handle_key_event(key: KeyEvent, app: &mut App) {
     match key.code {
         KeyCode::Char('q') | KeyCode::Esc => app.should_quit = true,
+        KeyCode::Down | KeyCode::Char('j') => app.next(),
+        KeyCode::Up | KeyCode::Char('k') => app.previous(),
         _ => {}
     }
 }
@@ -120,8 +150,10 @@ fn ui(f: &mut Frame, app: &mut App) {
         .block(
             Block::default()
                 .borders(Borders::ALL)
+                .title(" v11y ")
+                // .title(Line::from("https://github.com/santhosh-chinnasamy/v11y").right_aligned())
                 .title(" Vulnerability List ")
-                .title_bottom(" [q: quit] ")
+                .title_bottom(" [q: quit | ↑/↓: navigate] ")
                 .title_alignment(Alignment::Center),
         )
         .row_highlight_style(Style::default().bg(Color::DarkGray))
