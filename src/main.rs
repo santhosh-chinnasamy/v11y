@@ -8,7 +8,7 @@ mod risk;
 mod terminal;
 mod tui;
 
-use crate::cli::{Args, InterfaceMode};
+use crate::cli::Args;
 
 fn main() {
     let args = Args::parse();
@@ -27,20 +27,12 @@ fn main() {
     );
     let sorted_risks = risk::sort_by_priority(filtered_risks);
 
-    match args.interface {
-        InterfaceMode::Terminal => {
-            println!(
-                "Total Dependencies: {} \nTotal Vulnerabilities: {}",
-                &audit_result.metadata.dependencies.total,
-                &audit_result.metadata.vulnerabilities.total
-            );
-            terminal::formatted_result(sorted_risks);
-        }
-        InterfaceMode::Tui => {
-            if let Err(e) = tui::run(sorted_risks) {
-                eprintln!("TUI error: {}", e);
-                exit(1);
-            }
+    if args.cli {
+        terminal::formatted_result(sorted_risks);
+    } else {
+        if let Err(e) = tui::run(sorted_risks) {
+            eprintln!("TUI error: {}", e);
+            exit(1);
         }
     }
 }
