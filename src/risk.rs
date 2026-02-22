@@ -1,7 +1,7 @@
 use core::fmt;
 use std::cmp::Reverse;
 
-use crate::model::{NpmAudit, ViaEntry};
+use crate::model::{NpmAudit, ViaAdvisory, ViaEntry};
 use clap::ValueEnum;
 
 #[derive(Debug)]
@@ -11,6 +11,7 @@ pub struct PackageRisk {
     pub max_severity: Severity,
     pub vulnerability_count: usize,
     pub has_fix: bool,
+    pub advisory: Option<Vec<ViaAdvisory>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
@@ -70,6 +71,21 @@ pub fn build_package_risk(audit: NpmAudit) -> Vec<PackageRisk> {
             vulnerability_count: advisory_count,
             has_fix,
             max_severity: max_sev,
+            advisory: {
+                let advisories: Vec<_> = vulns
+                    .via
+                    .iter()
+                    .filter_map(|v| match v {
+                        ViaEntry::Advisory(advisory) => Some(advisory.clone()),
+                        _ => None,
+                    })
+                    .collect();
+                if advisories.is_empty() {
+                    None
+                } else {
+                    Some(advisories)
+                }
+            },
         });
     }
 
@@ -144,6 +160,7 @@ mod tests {
                 max_severity: Severity::High,
                 vulnerability_count: 2,
                 has_fix: true,
+                advisory: None,
             },
             PackageRisk {
                 name: "direct-notfixable-high".into(),
@@ -151,6 +168,7 @@ mod tests {
                 max_severity: Severity::High,
                 vulnerability_count: 1,
                 has_fix: false,
+                advisory: None,
             },
             PackageRisk {
                 name: "transitive-fixable-low".into(),
@@ -158,6 +176,7 @@ mod tests {
                 max_severity: Severity::Low,
                 vulnerability_count: 1,
                 has_fix: true,
+                advisory: None,
             },
         ]
     }
@@ -246,6 +265,9 @@ mod tests {
         assert_eq!(risks[0].vulnerability_count, 2);
         assert_eq!(risks[0].max_severity, Severity::High);
         assert!(risks[0].is_direct);
+        assert_eq!(risks[0].advisory.as_ref().unwrap().len(), 2);
+        assert_eq!(risks[0].advisory.as_ref().unwrap()[0].severity, "moderate");
+        assert_eq!(risks[0].advisory.as_ref().unwrap()[1].severity, "high");
     }
 
     #[test]
@@ -273,6 +295,7 @@ mod tests {
             max_severity: Severity::Low,
             vulnerability_count: 1,
             has_fix: true,
+            advisory: None,
         };
 
         let high_direct = PackageRisk {
@@ -281,6 +304,7 @@ mod tests {
             max_severity: Severity::High,
             vulnerability_count: 1,
             has_fix: true,
+            advisory: None,
         };
 
         assert!(risk_score(&high_direct) > risk_score(&low_transitive));
@@ -357,6 +381,7 @@ mod tests {
                 max_severity: Severity::Low,
                 vulnerability_count: 1,
                 has_fix: true,
+                advisory: None,
             },
             PackageRisk {
                 name: "critical".into(),
@@ -364,6 +389,7 @@ mod tests {
                 max_severity: Severity::Critical,
                 vulnerability_count: 5,
                 has_fix: false,
+                advisory: None,
             },
             PackageRisk {
                 name: "high".into(),
@@ -371,6 +397,7 @@ mod tests {
                 max_severity: Severity::High,
                 vulnerability_count: 2,
                 has_fix: false,
+                advisory: None,
             },
         ];
 
@@ -396,6 +423,7 @@ mod tests {
             max_severity: Severity::High,
             vulnerability_count: 1,
             has_fix: true,
+            advisory: None,
         };
 
         let without_fix = PackageRisk {
@@ -404,6 +432,7 @@ mod tests {
             max_severity: Severity::High,
             vulnerability_count: 1,
             has_fix: false,
+            advisory: None,
         };
 
         // Score difference should be 30 (10 for has_fix vs -20 for no fix)
@@ -419,6 +448,7 @@ mod tests {
                 max_severity: Severity::Critical,
                 vulnerability_count: 1,
                 has_fix: true,
+                advisory: None,
             },
             PackageRisk {
                 name: "indirect".into(),
@@ -426,6 +456,7 @@ mod tests {
                 max_severity: Severity::Critical,
                 vulnerability_count: 1,
                 has_fix: true,
+                advisory: None,
             },
             PackageRisk {
                 name: "no-fix".into(),
@@ -433,6 +464,7 @@ mod tests {
                 max_severity: Severity::Critical,
                 vulnerability_count: 1,
                 has_fix: false,
+                advisory: None,
             },
             PackageRisk {
                 name: "low-severity".into(),
@@ -440,6 +472,7 @@ mod tests {
                 max_severity: Severity::Low,
                 vulnerability_count: 1,
                 has_fix: true,
+                advisory: None,
             },
         ];
 

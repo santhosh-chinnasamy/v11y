@@ -10,10 +10,13 @@ use ratatui::{
         },
     },
     prelude::*,
-    widgets::{Block, Borders, Cell, Row, Table, TableState},
+    widgets::{Block, Borders, Cell, Clear, Paragraph, Row, Table, TableState, Wrap},
 };
 
-use crate::risk::{PackageRisk, Severity};
+use crate::{
+    model::ViaAdvisory,
+    risk::{PackageRisk, Severity},
+};
 
 pub fn run(risks: Vec<PackageRisk>) -> io::Result<()> {
     enable_raw_mode()?;
@@ -34,6 +37,7 @@ struct App {
     risks: Vec<PackageRisk>,
     state: TableState,
     should_quit: bool,
+    is_popup_open: bool,
 }
 
 impl App {
@@ -46,7 +50,12 @@ impl App {
             risks,
             state,
             should_quit: false,
+            is_popup_open: false,
         }
+    }
+
+    fn toggle_popup(&mut self) {
+        self.is_popup_open = !self.is_popup_open;
     }
 
     fn next(&mut self) {
@@ -98,9 +107,17 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
 
 fn handle_key_event(key: KeyEvent, app: &mut App) {
     match key.code {
-        KeyCode::Char('q') | KeyCode::Esc => app.should_quit = true,
+        KeyCode::Char('q') => app.should_quit = true,
+        KeyCode::Esc => {
+            if app.is_popup_open {
+                app.toggle_popup();
+            } else {
+                app.should_quit = true;
+            }
+        }
         KeyCode::Down | KeyCode::Char('j') => app.next(),
         KeyCode::Up | KeyCode::Char('k') => app.previous(),
+        KeyCode::Enter => app.toggle_popup(),
         _ => {}
     }
 }
@@ -151,7 +168,6 @@ fn ui(f: &mut Frame, app: &mut App) {
             Block::default()
                 .borders(Borders::ALL)
                 .title(" v11y ")
-                // .title(Line::from("https://github.com/santhosh-chinnasamy/v11y").right_aligned())
                 .title(" Vulnerability List ")
                 .title_bottom(" [q: quit | ↑/↓: navigate] ")
                 .title_alignment(Alignment::Center),
@@ -160,4 +176,60 @@ fn ui(f: &mut Frame, app: &mut App) {
         .highlight_symbol(">> ");
 
     f.render_stateful_widget(table, area, &mut app.state);
+    if app.is_popup_open {
+        render_popup(f, app);
+    }
+}
+
+fn render_popup(f: &mut Frame, app: &mut App) {
+    let area = f.area();
+
+    let selected_risk = &app.risks[app.state.selected().unwrap()];
+    let title = format!(
+        " Advisory for {} | Severity: {} ",
+        selected_risk.name, selected_risk.max_severity
+    );
+    let vulns_count = format!(" Vulns: {} ", selected_risk.vulnerability_count);
+
+    let centered_area = area.centered(Constraint::Percentage(60), Constraint::Percentage(40));
+    f.render_widget(Clear, centered_area);
+
+    let popup_block = Block::bordered()
+        .title(title)
+        .title(Line::from(vulns_count).right_aligned())
+        .bg(Color::Black);
+
+    let advisory_info: Vec<Line> = formatted_advisory(selected_risk.advisory.clone());
+    let paragraph = Paragraph::new(advisory_info)
+        .block(popup_block)
+        .fg(Color::White)
+        .wrap(Wrap { trim: true });
+
+    f.render_widget(paragraph, centered_area);
+}
+
+fn formatted_advisory(advisory: Option<Vec<ViaAdvisory>>) -> Vec<Line<'static>> {
+    match advisory {
+        Some(advisories) => {
+            let mut lines = Vec::new();
+            for (i, advisory) in advisories.into_iter().enumerate() {
+                if i > 0 {
+                    lines.push(Line::from("")); // Blank line between advisories
+                }
+                lines.push(Line::from(vec![
+                    Span::styled("Title:    ", Style::default().bold().fg(Color::Gray)),
+                    Span::styled(advisory.title, Style::default().bold()),
+                ]));
+                lines.push(Line::from(vec![
+                    Span::styled("URL:      ", Style::default().bold().fg(Color::Gray)),
+                    Span::styled(advisory.url, Style::default().fg(Color::Blue)),
+                ]));
+            }
+            lines
+        }
+        None => vec![Line::from(vec![Span::styled(
+            "No advisory found",
+            Style::default().fg(Color::Red).bold(),
+        )])],
+    }
 }
