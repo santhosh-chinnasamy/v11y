@@ -138,12 +138,7 @@ fn ui(f: &mut Frame, app: &mut App) {
         .risks
         .iter()
         .map(|risk| {
-            let severity_style = match risk.max_severity {
-                Severity::Critical => Style::default().bold().fg(Color::Red),
-                Severity::High => Style::default().bold().fg(Color::Rgb(246, 170, 40)),
-                Severity::Moderate => Style::default().bold().fg(Color::Yellow),
-                Severity::Low => Style::default().bold().fg(Color::Gray),
-            };
+            let severity_style = get_severity_style(risk.max_severity);
             Row::new(vec![
                 Cell::from(risk.name.clone()),
                 Cell::from(risk.max_severity.to_string()).style(severity_style),
@@ -185,11 +180,20 @@ fn render_popup(f: &mut Frame, app: &mut App) {
     let area = f.area();
 
     let selected_risk = &app.risks[app.state.selected().unwrap()];
-    let title = format!(
-        " Advisory for {} | Severity: {} ",
-        selected_risk.name, selected_risk.max_severity
-    );
-    let vulns_count = format!(" Vulns: {} ", selected_risk.vulnerability_count);
+    let title = Line::from(vec![
+        Span::from(" Advisory for "),
+        Span::from(selected_risk.name.clone()).bold(),
+    ]);
+    let vulns_count = Line::from(vec![
+        Span::from(" Vulns: "),
+        Span::from(selected_risk.vulnerability_count.to_string()),
+        Span::from(" | Severity: "),
+        Span::styled(
+            selected_risk.max_severity.to_string(),
+            get_severity_style(selected_risk.max_severity),
+        ),
+    ]);
+    // format!(" Vulns: {} ", selected_risk.vulnerability_count);
 
     let centered_area = area.centered(Constraint::Percentage(60), Constraint::Percentage(40));
     f.render_widget(Clear, centered_area);
@@ -231,5 +235,39 @@ fn formatted_advisory(advisory: Option<Vec<ViaAdvisory>>) -> Vec<Line<'static>> 
             "No advisory found",
             Style::default().fg(Color::Red).bold(),
         )])],
+    }
+}
+
+fn get_severity_style(severity: Severity) -> Style {
+    match severity {
+        Severity::Critical => Style::default().bold().fg(Color::Red),
+        Severity::High => Style::default().bold().fg(Color::Rgb(246, 170, 40)),
+        Severity::Moderate => Style::default().bold().fg(Color::Yellow),
+        Severity::Low => Style::default().bold().fg(Color::Gray),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_severity_style() {
+        assert_eq!(
+            get_severity_style(Severity::Critical),
+            Style::default().bold().fg(Color::Red)
+        );
+        assert_eq!(
+            get_severity_style(Severity::High),
+            Style::default().bold().fg(Color::Rgb(246, 170, 40))
+        );
+        assert_eq!(
+            get_severity_style(Severity::Moderate),
+            Style::default().bold().fg(Color::Yellow)
+        );
+        assert_eq!(
+            get_severity_style(Severity::Low),
+            Style::default().bold().fg(Color::Gray)
+        );
     }
 }
