@@ -10,7 +10,10 @@ use ratatui::{
         },
     },
     prelude::*,
-    widgets::{Block, Borders, Cell, Clear, Paragraph, Row, Table, TableState, Wrap},
+    widgets::{
+        Block, Borders, Cell, Clear, Paragraph, Row, Scrollbar, ScrollbarOrientation,
+        ScrollbarState, Table, TableState, Wrap,
+    },
 };
 
 use crate::{
@@ -38,6 +41,8 @@ struct App {
     state: TableState,
     should_quit: bool,
     is_popup_open: bool,
+    popup_scroll: u16,
+    popup_max_scroll: u16,
 }
 
 impl App {
@@ -51,11 +56,27 @@ impl App {
             state,
             should_quit: false,
             is_popup_open: false,
+            popup_scroll: 0,
+            popup_max_scroll: 0,
         }
     }
 
     fn toggle_popup(&mut self) {
         self.is_popup_open = !self.is_popup_open;
+        if self.is_popup_open {
+            self.popup_scroll = 0;
+            self.popup_max_scroll = 0;
+        }
+    }
+
+    fn scroll_popup_up(&mut self) {
+        self.popup_scroll = self.popup_scroll.saturating_sub(1);
+    }
+
+    fn scroll_popup_down(&mut self) {
+        if self.popup_scroll < self.popup_max_scroll {
+            self.popup_scroll = self.popup_scroll.saturating_add(1);
+        }
     }
 
     fn next(&mut self) {
@@ -115,8 +136,20 @@ fn handle_key_event(key: KeyEvent, app: &mut App) {
                 app.should_quit = true;
             }
         }
-        KeyCode::Down | KeyCode::Char('j') => app.next(),
-        KeyCode::Up | KeyCode::Char('k') => app.previous(),
+        KeyCode::Down | KeyCode::Char('j') => {
+            if app.is_popup_open {
+                app.scroll_popup_down();
+            } else {
+                app.next();
+            }
+        }
+        KeyCode::Up | KeyCode::Char('k') => {
+            if app.is_popup_open {
+                app.scroll_popup_up();
+            } else {
+                app.previous();
+            }
+        }
         KeyCode::Enter => app.toggle_popup(),
         _ => {}
     }
@@ -204,12 +237,43 @@ fn render_popup(f: &mut Frame, app: &mut App) {
         .bg(Color::Black);
 
     let advisory_info: Vec<Line> = formatted_advisory(selected_risk.advisory.clone());
+
+    let inner_area = popup_block.inner(centered_area);
+    let total_lines = count_wrapped_lines(&advisory_info, inner_area.width);
+    app.popup_max_scroll = total_lines.saturating_sub(inner_area.height as usize) as u16;
+
     let paragraph = Paragraph::new(advisory_info)
         .block(popup_block)
         .fg(Color::White)
-        .wrap(Wrap { trim: true });
+        .wrap(Wrap { trim: true })
+        .scroll((app.popup_scroll, 0));
 
     f.render_widget(paragraph, centered_area);
+
+    if total_lines > inner_area.height as usize {
+        let mut scrollbar_state =
+            ScrollbarState::new(app.popup_max_scroll as usize).position(app.popup_scroll as usize);
+        let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+            .begin_symbol(Some("↑"))
+            .end_symbol(Some("↓"));
+        f.render_stateful_widget(scrollbar, centered_area, &mut scrollbar_state);
+    }
+}
+
+fn count_wrapped_lines(lines: &[Line], width: u16) -> usize {
+    let mut count = 0;
+    if width == 0 {
+        return lines.len();
+    }
+    for line in lines {
+        let line_width = line.width();
+        if line_width == 0 {
+            count += 1; // Empty line
+        } else {
+            count += (line_width as f64 / width as f64).ceil() as usize;
+        }
+    }
+    count
 }
 
 fn formatted_advisory(advisory: Option<Vec<ViaAdvisory>>) -> Vec<Line<'static>> {
@@ -221,20 +285,17 @@ fn formatted_advisory(advisory: Option<Vec<ViaAdvisory>>) -> Vec<Line<'static>> 
                     lines.push(Line::from("")); // Blank line between advisories
                 }
                 lines.push(Line::from(vec![
-                    Span::styled("Title:    ", Style::default().bold().fg(Color::Gray)),
+                    Span::styled(format!("{}. ", i + 1), Style::default().bold()),
                     Span::styled(advisory.title, Style::default().bold()),
                 ]));
-                lines.push(Line::from(vec![
-                    Span::styled("URL:      ", Style::default().bold().fg(Color::Gray)),
-                    Span::styled(advisory.url, Style::default().fg(Color::Blue)),
-                ]));
+                lines.push(Line::from(Span::styled(
+                    advisory.url,
+                    Style::default().fg(Color::Blue),
+                )));
             }
             lines
         }
-        None => vec![Line::from(vec![Span::styled(
-            "No advisory found",
-            Style::default().fg(Color::Red).bold(),
-        )])],
+        None => vec![Line::from("No advisory found")],
     }
 }
 
