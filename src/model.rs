@@ -81,4 +81,17 @@ pub struct ViaAdvisory {
 
     #[serde(default)]
     pub range: Option<String>,
+
+    #[serde(default)]
+    pub cwe: Vec<String>,
+
+    #[serde(default)]
+    pub cvss: Option<CvssInfo>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct CvssInfo {
+    pub score: f64,
+    #[serde(rename = "vectorString", default)]
+    pub vector_string: Option<String>,
 }

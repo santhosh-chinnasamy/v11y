@@ -479,10 +479,29 @@ fn formatted_advisory(advisory: Option<Vec<ViaAdvisory>>) -> Vec<Line<'static>> 
                     Span::styled(format!("{}. ", i + 1), Style::default().bold()),
                     Span::styled(advisory.title, Style::default().bold()),
                 ]));
-                lines.push(Line::from(Span::styled(
-                    advisory.url,
-                    Style::default().fg(Color::Blue),
-                )));
+                if !advisory.cwe.is_empty() {
+                    lines.push(Line::from(vec![
+                        Span::from("   CWE: "),
+                        Span::from(advisory.cwe.join(", ")),
+                    ]));
+                }
+                if let Some(cvss) = advisory.cvss {
+                    let cvss_str = match cvss.vector_string {
+                        Some(vector) => format!("{} ({})", cvss.score, vector),
+                        None => cvss.score.to_string(),
+                    };
+                    lines.push(Line::from(vec![
+                        Span::from("   CVSS: "),
+                        Span::from(cvss_str),
+                    ]));
+                }
+                lines.push(Line::from(vec![
+                    Span::from("   URL: "),
+                    Span::styled(
+                        advisory.url,
+                        Style::default().fg(Color::Blue),
+                    ),
+                ]));
             }
             lines
         }

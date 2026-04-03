@@ -229,6 +229,8 @@ mod tests {
                 url: "http://example.com".into(),
                 dependency: None,
                 range: None,
+                cwe: vec![],
+                cvss: None,
             }),
             ViaEntry::Advisory(ViaAdvisory {
                 name: "pkg".into(),
@@ -237,6 +239,8 @@ mod tests {
                 url: "http://example.com".into(),
                 dependency: None,
                 range: None,
+                cwe: vec![],
+                cvss: None,
             }),
         ];
 
@@ -268,6 +272,8 @@ mod tests {
                         url: "http://example.com".into(),
                         dependency: None,
                         range: None,
+                        cwe: vec![],
+                        cvss: None,
                     }),
                     ViaEntry::Advisory(ViaAdvisory {
                         name: "vite".into(),
@@ -276,6 +282,8 @@ mod tests {
                         url: "http://example.com".into(),
                         dependency: None,
                         range: None,
+                        cwe: vec![],
+                        cvss: None,
                     }),
                 ],
             },
