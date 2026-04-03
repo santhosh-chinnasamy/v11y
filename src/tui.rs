@@ -9,6 +9,7 @@ use ratatui::{
             EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
         },
     },
+    layout::{Constraint, Direction, Layout, Rect},
     prelude::*,
     widgets::{
         Block, Borders, Cell, Clear, Paragraph, Row, Scrollbar, ScrollbarOrientation,
@@ -36,12 +37,18 @@ pub fn run(risks: Vec<PackageRisk>) -> io::Result<()> {
     result
 }
 
+#[derive(PartialEq)]
+enum ActivePane {
+    List,
+    Details,
+}
+
 struct App {
     all_risks: Vec<PackageRisk>,
     filtered_risks: Vec<PackageRisk>,
     state: TableState,
     should_quit: bool,
-    is_popup_open: bool,
+    active_pane: ActivePane,
     popup_scroll: u16,
     popup_max_scroll: u16,
     show_low: bool,
@@ -64,7 +71,7 @@ impl App {
             filtered_risks,
             state,
             should_quit: false,
-            is_popup_open: false,
+            active_pane: ActivePane::List,
             popup_scroll: 0,
             popup_max_scroll: 0,
             show_low: true,
@@ -90,6 +97,7 @@ impl App {
 
         if self.filtered_risks.is_empty() {
             self.state.select(None);
+            self.popup_scroll = 0;
         } else {
             if let Some(selected) = self.state.selected() {
                 if selected >= self.filtered_risks.len() {
@@ -98,6 +106,7 @@ impl App {
             } else {
                 self.state.select(Some(0));
             }
+            self.popup_scroll = 0;
         }
     }
 
@@ -111,14 +120,11 @@ impl App {
         self.apply_filters();
     }
 
-    fn toggle_popup(&mut self) {
-        if self.filtered_risks.is_empty() {
-            return;
-        }
-        self.is_popup_open = !self.is_popup_open;
-        if self.is_popup_open {
-            self.popup_scroll = 0;
-            self.popup_max_scroll = 0;
+    fn toggle_pane(&mut self) {
+        if self.active_pane == ActivePane::List {
+            self.active_pane = ActivePane::Details;
+        } else {
+            self.active_pane = ActivePane::List;
         }
     }
 
@@ -147,6 +153,7 @@ impl App {
             None => 0,
         };
         self.state.select(Some(i));
+        self.popup_scroll = 0;
     }
 
     fn previous(&mut self) {
@@ -164,6 +171,7 @@ impl App {
             None => 0,
         };
         self.state.select(Some(i));
+        self.popup_scroll = 0;
     }
 }
 
@@ -187,55 +195,38 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
 
 fn handle_key_event(key: KeyEvent, app: &mut App) {
     match key.code {
-        KeyCode::Char('q') => app.should_quit = true,
-        KeyCode::Char('l') => {
-            if !app.is_popup_open {
-                app.toggle_filter(Severity::Low);
-            }
-        }
-        KeyCode::Char('m') => {
-            if !app.is_popup_open {
-                app.toggle_filter(Severity::Moderate);
-            }
-        }
-        KeyCode::Char('h') => {
-            if !app.is_popup_open {
-                app.toggle_filter(Severity::High);
-            }
-        }
-        KeyCode::Char('c') => {
-            if !app.is_popup_open {
-                app.toggle_filter(Severity::Critical);
-            }
-        }
-        KeyCode::Esc => {
-            if app.is_popup_open {
-                app.toggle_popup();
-            } else {
-                app.should_quit = true;
-            }
-        }
+        KeyCode::Char('q') | KeyCode::Esc => app.should_quit = true,
+        KeyCode::Tab | KeyCode::Right | KeyCode::Left => app.toggle_pane(),
+        KeyCode::Char('l') => app.toggle_filter(Severity::Low),
+        KeyCode::Char('m') => app.toggle_filter(Severity::Moderate),
+        KeyCode::Char('h') => app.toggle_filter(Severity::High),
+        KeyCode::Char('c') => app.toggle_filter(Severity::Critical),
         KeyCode::Down | KeyCode::Char('j') => {
-            if app.is_popup_open {
+            if app.active_pane == ActivePane::Details {
                 app.scroll_popup_down();
             } else {
                 app.next();
             }
         }
         KeyCode::Up | KeyCode::Char('k') => {
-            if app.is_popup_open {
+            if app.active_pane == ActivePane::Details {
                 app.scroll_popup_up();
             } else {
                 app.previous();
             }
         }
-        KeyCode::Enter => app.toggle_popup(),
         _ => {}
     }
 }
 
 fn ui(f: &mut Frame, app: &mut App) {
-    let area = f.area();
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
+        .split(f.area());
+
+    let list_area = chunks[0];
+    let details_area = chunks[1];
 
     let header = Row::new(vec![
         Cell::from("Package").style(Style::default().bold()),
@@ -277,33 +268,55 @@ fn ui(f: &mut Frame, app: &mut App) {
         if app.show_critical { "ON" } else { "OFF" }
     );
 
+    let list_border_style = if app.active_pane == ActivePane::List {
+        Style::default().fg(Color::White).bold()
+    } else {
+        Style::default().fg(Color::DarkGray)
+    };
+
     let table = Table::new(rows, widths)
         .header(header)
         .block(
             Block::default()
                 .borders(Borders::ALL)
+                .border_style(list_border_style)
                 .title(" v11y ")
                 .title(" Vulnerability List ")
                 .title_bottom(filter_status)
-                .title_bottom(" [q: quit | ↑/↓: navigate] ")
+                .title_bottom(" [q: quit | Tab/←/→: switch pane | ↑/↓: navigate] ")
                 .title_alignment(Alignment::Center),
         )
         .row_highlight_style(Style::default().bg(Color::DarkGray))
         .highlight_symbol(">> ");
 
-    f.render_stateful_widget(table, area, &mut app.state);
-    if app.is_popup_open {
-        render_popup(f, app);
-    }
+    f.render_stateful_widget(table, list_area, &mut app.state);
+    
+    render_details(f, app, details_area);
 }
 
-fn render_popup(f: &mut Frame, app: &mut App) {
-    let area = f.area();
+fn render_details(f: &mut Frame, app: &mut App, area: Rect) {
+    let details_border_style = if app.active_pane == ActivePane::Details {
+        Style::default().fg(Color::White).bold()
+    } else {
+        Style::default().fg(Color::DarkGray)
+    };
+
+    if app.filtered_risks.is_empty() || app.state.selected().is_none() {
+        let block = Block::bordered()
+            .border_style(details_border_style)
+            .title(" Advisory Details ");
+        let paragraph = Paragraph::new("No vulnerabilities selected.")
+            .block(block)
+            .alignment(Alignment::Center);
+        f.render_widget(paragraph, area);
+        return;
+    }
 
     let selected_risk = &app.filtered_risks[app.state.selected().unwrap()];
     let title = Line::from(vec![
         Span::from(" Advisory for "),
         Span::from(selected_risk.name.clone()).bold(),
+        Span::from(" "),
     ]);
     let vulns_count = Line::from(vec![
         Span::from(" Vulns: "),
@@ -313,30 +326,27 @@ fn render_popup(f: &mut Frame, app: &mut App) {
             selected_risk.max_severity.to_string(),
             get_severity_style(selected_risk.max_severity),
         ),
+        Span::from(" "),
     ]);
-    // format!(" Vulns: {} ", selected_risk.vulnerability_count);
 
-    let centered_area = area.centered(Constraint::Percentage(60), Constraint::Percentage(40));
-    f.render_widget(Clear, centered_area);
-
-    let popup_block = Block::bordered()
+    let details_block = Block::bordered()
+        .border_style(details_border_style)
         .title(title)
-        .title(Line::from(vulns_count).right_aligned())
-        .bg(Color::Black);
+        .title(Line::from(vulns_count).right_aligned());
 
     let advisory_info: Vec<Line> = formatted_advisory(selected_risk.advisory.clone());
 
-    let inner_area = popup_block.inner(centered_area);
+    let inner_area = details_block.inner(area);
     let total_lines = count_wrapped_lines(&advisory_info, inner_area.width);
     app.popup_max_scroll = total_lines.saturating_sub(inner_area.height as usize) as u16;
 
     let paragraph = Paragraph::new(advisory_info)
-        .block(popup_block)
+        .block(details_block)
         .fg(Color::White)
         .wrap(Wrap { trim: true })
         .scroll((app.popup_scroll, 0));
 
-    f.render_widget(paragraph, centered_area);
+    f.render_widget(paragraph, area);
 
     if total_lines > inner_area.height as usize {
         let mut scrollbar_state =
@@ -344,7 +354,7 @@ fn render_popup(f: &mut Frame, app: &mut App) {
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
             .begin_symbol(Some("↑"))
             .end_symbol(Some("↓"));
-        f.render_stateful_widget(scrollbar, centered_area, &mut scrollbar_state);
+        f.render_stateful_widget(scrollbar, area, &mut scrollbar_state);
     }
 }
 
