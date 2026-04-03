@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::risk::Severity;
+use v11y_core::risk::Severity;
 use clap::{Parser, ValueEnum};
 
 #[derive(Debug, Clone, Copy, ValueEnum)]

@@ -12,12 +12,12 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     prelude::*,
     widgets::{
-        Block, Borders, Cell, Clear, Paragraph, Row, Scrollbar, ScrollbarOrientation,
+        Block, Borders, Cell, Paragraph, Row, Scrollbar, ScrollbarOrientation,
         ScrollbarState, Table, TableState, Wrap,
     },
 };
 
-use crate::{
+use v11y_core::{
     model::ViaAdvisory,
     risk::{PackageRisk, Severity},
 };

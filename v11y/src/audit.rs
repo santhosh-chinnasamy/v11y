@@ -1,4 +1,4 @@
-use crate::model::NpmAudit;
+use v11y_core::model::NpmAudit;
 use color_eyre::eyre::{eyre, Result, WrapErr};
 use std::process::Command;
 
@@ -29,7 +29,7 @@ mod tests {
     #[test]
     fn parses_npm_audit_fixture() {
         let json =
-            fs::read_to_string("tests/fixtures/npm-audit.json").expect("failed to read fixture");
+            fs::read_to_string("../v11y-core/tests/fixtures/npm-audit.json").expect("failed to read fixture");
 
         let audit = parse_npm_json(&json).expect("failed to parse npm audit JSON");
 
@@ -53,7 +53,7 @@ mod tests {
     #[test]
     fn test_parse_with_whitespace() {
         let json =
-            fs::read_to_string("tests/fixtures/npm-audit.json").expect("failed to read fixture");
+            fs::read_to_string("../v11y-core/tests/fixtures/npm-audit.json").expect("failed to read fixture");
         let with_whitespace = format!("\n\n  {}  \n", json);
 
         let audit = parse_npm_json(&with_whitespace).expect("should handle whitespace");

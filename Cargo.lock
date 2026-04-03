@@ -2086,6 +2086,16 @@ dependencies = [
  "serde",
  "serde_json",
  "tui-markdown",
+ "v11y-core",
+]
+
+[[package]]
+name = "v11y-core"
+version = "0.1.0"
+dependencies = [
+ "color-eyre",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
