@@ -219,11 +219,73 @@ fn handle_key_event(key: KeyEvent, app: &mut App) {
     }
 }
 
+struct Metrics {
+    total_packages: usize,
+    total_vulns: usize,
+    fixable: usize,
+    critical: usize,
+    high: usize,
+    moderate: usize,
+    low: usize,
+}
+
+fn compute_metrics(risks: &[PackageRisk]) -> Metrics {
+    let mut metrics = Metrics {
+        total_packages: risks.len(),
+        total_vulns: 0,
+        fixable: 0,
+        critical: 0,
+        high: 0,
+        moderate: 0,
+        low: 0,
+    };
+
+    for risk in risks {
+        metrics.total_vulns += risk.vulnerability_count;
+        if risk.has_fix {
+            metrics.fixable += 1;
+        }
+        match risk.max_severity {
+            Severity::Critical => metrics.critical += 1,
+            Severity::High => metrics.high += 1,
+            Severity::Moderate => metrics.moderate += 1,
+            Severity::Low => metrics.low += 1,
+        }
+    }
+
+    metrics
+}
+
 fn ui(f: &mut Frame, app: &mut App) {
+    let main_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(3), Constraint::Min(0)])
+        .split(f.area());
+
+    let summary_area = main_chunks[0];
+    let content_area = main_chunks[1];
+
+    let metrics = compute_metrics(&app.all_risks);
+
+    let summary_text = Line::from(vec![
+        Span::from(format!(" Total Packages: {} | Total Vulns: {} | Fixable: {} ", metrics.total_packages, metrics.total_vulns, metrics.fixable)).bold(),
+        Span::from(" | Severities - "),
+        Span::styled(format!(" Critical: {} ", metrics.critical), get_severity_style(Severity::Critical)),
+        Span::styled(format!(" High: {} ", metrics.high), get_severity_style(Severity::High)),
+        Span::styled(format!(" Moderate: {} ", metrics.moderate), get_severity_style(Severity::Moderate)),
+        Span::styled(format!(" Low: {} ", metrics.low), get_severity_style(Severity::Low)),
+    ]);
+
+    let summary_paragraph = Paragraph::new(summary_text)
+        .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(Color::DarkGray)))
+        .alignment(Alignment::Center);
+
+    f.render_widget(summary_paragraph, summary_area);
+
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
-        .split(f.area());
+        .split(content_area);
 
     let list_area = chunks[0];
     let details_area = chunks[1];
@@ -428,5 +490,45 @@ mod tests {
             get_severity_style(Severity::Low),
             Style::default().bold().fg(Color::Gray)
         );
+    }
+
+    #[test]
+    fn test_compute_metrics() {
+        let risks = vec![
+            PackageRisk {
+                name: "pkg1".to_string(),
+                is_direct: true,
+                max_severity: Severity::Critical,
+                vulnerability_count: 5,
+                has_fix: true,
+                advisory: None,
+            },
+            PackageRisk {
+                name: "pkg2".to_string(),
+                is_direct: false,
+                max_severity: Severity::High,
+                vulnerability_count: 2,
+                has_fix: false,
+                advisory: None,
+            },
+            PackageRisk {
+                name: "pkg3".to_string(),
+                is_direct: true,
+                max_severity: Severity::Low,
+                vulnerability_count: 1,
+                has_fix: true,
+                advisory: None,
+            },
+        ];
+
+        let metrics = compute_metrics(&risks);
+
+        assert_eq!(metrics.total_packages, 3);
+        assert_eq!(metrics.total_vulns, 8);
+        assert_eq!(metrics.fixable, 2);
+        assert_eq!(metrics.critical, 1);
+        assert_eq!(metrics.high, 1);
+        assert_eq!(metrics.moderate, 0);
+        assert_eq!(metrics.low, 1);
     }
 }
