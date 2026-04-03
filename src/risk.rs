@@ -3,7 +3,7 @@ use std::cmp::Reverse;
 
 use crate::model::{NpmAudit, ViaAdvisory, ViaEntry};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PackageRisk {
     pub name: String,
     pub is_direct: bool,

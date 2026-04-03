@@ -37,12 +37,17 @@ pub fn run(risks: Vec<PackageRisk>) -> io::Result<()> {
 }
 
 struct App {
-    risks: Vec<PackageRisk>,
+    all_risks: Vec<PackageRisk>,
+    filtered_risks: Vec<PackageRisk>,
     state: TableState,
     should_quit: bool,
     is_popup_open: bool,
     popup_scroll: u16,
     popup_max_scroll: u16,
+    show_low: bool,
+    show_moderate: bool,
+    show_high: bool,
+    show_critical: bool,
 }
 
 impl App {
@@ -51,18 +56,63 @@ impl App {
         if !risks.is_empty() {
             state.select(Some(0));
         }
+        
+        let filtered_risks = risks.clone();
+
         Self {
-            risks,
+            all_risks: risks,
+            filtered_risks,
             state,
             should_quit: false,
             is_popup_open: false,
             popup_scroll: 0,
             popup_max_scroll: 0,
+            show_low: true,
+            show_moderate: true,
+            show_high: true,
+            show_critical: true,
         }
     }
 
+    fn apply_filters(&mut self) {
+        self.filtered_risks = self.all_risks
+            .iter()
+            .filter(|risk| {
+                match risk.max_severity {
+                    Severity::Low => self.show_low,
+                    Severity::Moderate => self.show_moderate,
+                    Severity::High => self.show_high,
+                    Severity::Critical => self.show_critical,
+                }
+            })
+            .cloned()
+            .collect();
+
+        if self.filtered_risks.is_empty() {
+            self.state.select(None);
+        } else {
+            if let Some(selected) = self.state.selected() {
+                if selected >= self.filtered_risks.len() {
+                    self.state.select(Some(self.filtered_risks.len() - 1));
+                }
+            } else {
+                self.state.select(Some(0));
+            }
+        }
+    }
+
+    fn toggle_filter(&mut self, severity: Severity) {
+        match severity {
+            Severity::Low => self.show_low = !self.show_low,
+            Severity::Moderate => self.show_moderate = !self.show_moderate,
+            Severity::High => self.show_high = !self.show_high,
+            Severity::Critical => self.show_critical = !self.show_critical,
+        }
+        self.apply_filters();
+    }
+
     fn toggle_popup(&mut self) {
-        if self.risks.is_empty() {
+        if self.filtered_risks.is_empty() {
             return;
         }
         self.is_popup_open = !self.is_popup_open;
@@ -83,12 +133,12 @@ impl App {
     }
 
     fn next(&mut self) {
-        if self.risks.is_empty() {
+        if self.filtered_risks.is_empty() {
             return;
         }
         let i = match self.state.selected() {
             Some(i) => {
-                if i >= self.risks.len() - 1 {
+                if i >= self.filtered_risks.len() - 1 {
                     0
                 } else {
                     i + 1
@@ -100,13 +150,13 @@ impl App {
     }
 
     fn previous(&mut self) {
-        if self.risks.is_empty() {
+        if self.filtered_risks.is_empty() {
             return;
         }
         let i = match self.state.selected() {
             Some(i) => {
                 if i == 0 {
-                    self.risks.len() - 1
+                    self.filtered_risks.len() - 1
                 } else {
                     i - 1
                 }
@@ -138,6 +188,26 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
 fn handle_key_event(key: KeyEvent, app: &mut App) {
     match key.code {
         KeyCode::Char('q') => app.should_quit = true,
+        KeyCode::Char('l') => {
+            if !app.is_popup_open {
+                app.toggle_filter(Severity::Low);
+            }
+        }
+        KeyCode::Char('m') => {
+            if !app.is_popup_open {
+                app.toggle_filter(Severity::Moderate);
+            }
+        }
+        KeyCode::Char('h') => {
+            if !app.is_popup_open {
+                app.toggle_filter(Severity::High);
+            }
+        }
+        KeyCode::Char('c') => {
+            if !app.is_popup_open {
+                app.toggle_filter(Severity::Critical);
+            }
+        }
         KeyCode::Esc => {
             if app.is_popup_open {
                 app.toggle_popup();
@@ -177,7 +247,7 @@ fn ui(f: &mut Frame, app: &mut App) {
     .height(1);
 
     let rows: Vec<Row> = app
-        .risks
+        .filtered_risks
         .iter()
         .map(|risk| {
             let severity_style = get_severity_style(risk.max_severity);
@@ -199,6 +269,14 @@ fn ui(f: &mut Frame, app: &mut App) {
         Constraint::Percentage(15),
     ];
 
+    let filter_status = format!(
+        " Filters - [L]ow: {} | [M]oderate: {} | [H]igh: {} | [C]ritical: {} ",
+        if app.show_low { "ON" } else { "OFF" },
+        if app.show_moderate { "ON" } else { "OFF" },
+        if app.show_high { "ON" } else { "OFF" },
+        if app.show_critical { "ON" } else { "OFF" }
+    );
+
     let table = Table::new(rows, widths)
         .header(header)
         .block(
@@ -206,6 +284,7 @@ fn ui(f: &mut Frame, app: &mut App) {
                 .borders(Borders::ALL)
                 .title(" v11y ")
                 .title(" Vulnerability List ")
+                .title_bottom(filter_status)
                 .title_bottom(" [q: quit | ↑/↓: navigate] ")
                 .title_alignment(Alignment::Center),
         )
@@ -221,7 +300,7 @@ fn ui(f: &mut Frame, app: &mut App) {
 fn render_popup(f: &mut Frame, app: &mut App) {
     let area = f.area();
 
-    let selected_risk = &app.risks[app.state.selected().unwrap()];
+    let selected_risk = &app.filtered_risks[app.state.selected().unwrap()];
     let title = Line::from(vec![
         Span::from(" Advisory for "),
         Span::from(selected_risk.name.clone()).bold(),
