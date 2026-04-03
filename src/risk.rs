@@ -10,6 +10,10 @@ pub struct PackageRisk {
     pub max_severity: Severity,
     pub vulnerability_count: usize,
     pub has_fix: bool,
+    pub effects: Vec<String>,
+    pub range: String,
+    pub nodes: Vec<String>,
+    pub transitive_causes: Vec<String>,
     pub advisory: Option<Vec<ViaAdvisory>>,
 }
 
@@ -64,12 +68,25 @@ pub fn build_package_risk(audit: NpmAudit) -> Vec<PackageRisk> {
         };
         let max_sev = max_severity(&vulns.via).unwrap_or(Severity::Low);
 
+        let transitive_causes: Vec<String> = vulns
+            .via
+            .iter()
+            .filter_map(|v| match v {
+                ViaEntry::Package(p) => Some(p.clone()),
+                _ => None,
+            })
+            .collect();
+
         result.push(PackageRisk {
             name: pkg_name,
             is_direct: vulns.is_direct,
             vulnerability_count: advisory_count,
             has_fix,
             max_severity: max_sev,
+            effects: vulns.effects,
+            range: vulns.range,
+            nodes: vulns.nodes,
+            transitive_causes,
             advisory: {
                 let advisories: Vec<_> = vulns
                     .via
@@ -159,6 +176,10 @@ mod tests {
                 max_severity: Severity::High,
                 vulnerability_count: 2,
                 has_fix: true,
+                effects: vec![],
+                range: "".to_string(),
+                nodes: vec![],
+                transitive_causes: vec![],
                 advisory: None,
             },
             PackageRisk {
@@ -167,6 +188,10 @@ mod tests {
                 max_severity: Severity::High,
                 vulnerability_count: 1,
                 has_fix: false,
+                effects: vec![],
+                range: "".to_string(),
+                nodes: vec![],
+                transitive_causes: vec![],
                 advisory: None,
             },
             PackageRisk {
@@ -175,6 +200,10 @@ mod tests {
                 max_severity: Severity::Low,
                 vulnerability_count: 1,
                 has_fix: true,
+                effects: vec![],
+                range: "".to_string(),
+                nodes: vec![],
+                transitive_causes: vec![],
                 advisory: None,
             },
         ]
@@ -230,6 +259,7 @@ mod tests {
                 fix_available: serde_json::Value::Bool(true),
                 range: ">=4.0.0".into(),
                 nodes: vec![],
+                effects: vec![],
                 via: vec![
                     ViaEntry::Advisory(ViaAdvisory {
                         name: "vite".into(),
@@ -294,6 +324,10 @@ mod tests {
             max_severity: Severity::Low,
             vulnerability_count: 1,
             has_fix: true,
+            effects: vec![],
+            range: "".to_string(),
+            nodes: vec![],
+            transitive_causes: vec![],
             advisory: None,
         };
 
@@ -303,6 +337,10 @@ mod tests {
             max_severity: Severity::High,
             vulnerability_count: 1,
             has_fix: true,
+            effects: vec![],
+            range: "".to_string(),
+            nodes: vec![],
+            transitive_causes: vec![],
             advisory: None,
         };
 
@@ -380,6 +418,10 @@ mod tests {
                 max_severity: Severity::Low,
                 vulnerability_count: 1,
                 has_fix: true,
+                effects: vec![],
+                range: "".to_string(),
+                nodes: vec![],
+                transitive_causes: vec![],
                 advisory: None,
             },
             PackageRisk {
@@ -388,6 +430,10 @@ mod tests {
                 max_severity: Severity::Critical,
                 vulnerability_count: 5,
                 has_fix: false,
+                effects: vec![],
+                range: "".to_string(),
+                nodes: vec![],
+                transitive_causes: vec![],
                 advisory: None,
             },
             PackageRisk {
@@ -396,6 +442,10 @@ mod tests {
                 max_severity: Severity::High,
                 vulnerability_count: 2,
                 has_fix: false,
+                effects: vec![],
+                range: "".to_string(),
+                nodes: vec![],
+                transitive_causes: vec![],
                 advisory: None,
             },
         ];
@@ -422,6 +472,10 @@ mod tests {
             max_severity: Severity::High,
             vulnerability_count: 1,
             has_fix: true,
+            effects: vec![],
+            range: "".to_string(),
+            nodes: vec![],
+            transitive_causes: vec![],
             advisory: None,
         };
 
@@ -431,6 +485,10 @@ mod tests {
             max_severity: Severity::High,
             vulnerability_count: 1,
             has_fix: false,
+            effects: vec![],
+            range: "".to_string(),
+            nodes: vec![],
+            transitive_causes: vec![],
             advisory: None,
         };
 
@@ -447,6 +505,10 @@ mod tests {
                 max_severity: Severity::Critical,
                 vulnerability_count: 1,
                 has_fix: true,
+                effects: vec![],
+                range: "".to_string(),
+                nodes: vec![],
+                transitive_causes: vec![],
                 advisory: None,
             },
             PackageRisk {
@@ -455,6 +517,10 @@ mod tests {
                 max_severity: Severity::Critical,
                 vulnerability_count: 1,
                 has_fix: true,
+                effects: vec![],
+                range: "".to_string(),
+                nodes: vec![],
+                transitive_causes: vec![],
                 advisory: None,
             },
             PackageRisk {
@@ -463,6 +529,10 @@ mod tests {
                 max_severity: Severity::Critical,
                 vulnerability_count: 1,
                 has_fix: false,
+                effects: vec![],
+                range: "".to_string(),
+                nodes: vec![],
+                transitive_causes: vec![],
                 advisory: None,
             },
             PackageRisk {
@@ -471,6 +541,10 @@ mod tests {
                 max_severity: Severity::Low,
                 vulnerability_count: 1,
                 has_fix: true,
+                effects: vec![],
+                range: "".to_string(),
+                nodes: vec![],
+                transitive_causes: vec![],
                 advisory: None,
             },
         ];

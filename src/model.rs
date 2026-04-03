@@ -53,6 +53,9 @@ pub struct NpmVulnerability {
 
     pub nodes: Vec<String>,
 
+    #[serde(default)]
+    pub effects: Vec<String>,
+
     pub via: Vec<ViaEntry>,
 }
 

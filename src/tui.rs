@@ -376,7 +376,6 @@ fn render_details(f: &mut Frame, app: &mut App, area: Rect) {
 
     let selected_risk = &app.filtered_risks[app.state.selected().unwrap()];
     let title = Line::from(vec![
-        Span::from(" Advisory for "),
         Span::from(selected_risk.name.clone()).bold(),
         Span::from(" "),
     ]);
@@ -396,7 +395,39 @@ fn render_details(f: &mut Frame, app: &mut App, area: Rect) {
         .title(title)
         .title(Line::from(vulns_count).right_aligned());
 
-    let advisory_info: Vec<Line> = formatted_advisory(selected_risk.advisory.clone());
+    let mut advisory_info = Vec::new();
+
+    advisory_info.push(Line::from(vec![
+        Span::styled(" Vulnerable Range: ", Style::default().bold()),
+        Span::from(selected_risk.range.clone()),
+    ]));
+
+    if !selected_risk.nodes.is_empty() {
+        advisory_info.push(Line::from(vec![
+            Span::styled(" Nodes: ", Style::default().bold()),
+            Span::from(selected_risk.nodes.join(", ")),
+        ]));
+    }
+
+    if !selected_risk.effects.is_empty() {
+        advisory_info.push(Line::from(vec![
+            Span::styled(" Effects: ", Style::default().bold()),
+            Span::from(selected_risk.effects.join(", ")),
+        ]));
+    }
+
+    if !selected_risk.transitive_causes.is_empty() {
+        advisory_info.push(Line::from(vec![
+            Span::styled(" Caused By (Transitive): ", Style::default().bold()),
+            Span::from(selected_risk.transitive_causes.join(", ")),
+        ]));
+    }
+
+    advisory_info.push(Line::from(""));
+    advisory_info.push(Line::from(Span::styled(" Advisories:", Style::default().bold().underlined())));
+    advisory_info.push(Line::from(""));
+
+    advisory_info.extend(formatted_advisory(selected_risk.advisory.clone()));
 
     let inner_area = details_block.inner(area);
     let total_lines = count_wrapped_lines(&advisory_info, inner_area.width);
@@ -501,6 +532,10 @@ mod tests {
                 max_severity: Severity::Critical,
                 vulnerability_count: 5,
                 has_fix: true,
+                effects: vec![],
+                range: "".to_string(),
+                nodes: vec![],
+                transitive_causes: vec![],
                 advisory: None,
             },
             PackageRisk {
@@ -509,6 +544,10 @@ mod tests {
                 max_severity: Severity::High,
                 vulnerability_count: 2,
                 has_fix: false,
+                effects: vec![],
+                range: "".to_string(),
+                nodes: vec![],
+                transitive_causes: vec![],
                 advisory: None,
             },
             PackageRisk {
@@ -517,6 +556,10 @@ mod tests {
                 max_severity: Severity::Low,
                 vulnerability_count: 1,
                 has_fix: true,
+                effects: vec![],
+                range: "".to_string(),
+                nodes: vec![],
+                transitive_causes: vec![],
                 advisory: None,
             },
         ];
