@@ -1,5 +1,5 @@
 use clap::Parser;
-use std::{cmp::Reverse, process::exit};
+use color_eyre::Result;
 
 mod audit;
 mod cli;
@@ -10,18 +10,16 @@ mod tui;
 
 use crate::cli::Args;
 
-fn main() {
+fn main() -> Result<()> {
+    color_eyre::install()?;
     let args = Args::parse();
 
-    let audit_result = audit::npm().unwrap_or_else(|e| {
-        eprintln!("Error running npm audit: {}", e);
-        exit(1);
-    });
+    let audit_result = audit::npm()?;
 
-    let identified_risks = risk::build_package_risk(audit_result.clone());
+    let identified_risks = risk::build_package_risk(audit_result);
     let filtered_risks = risk::filter_risks(
         identified_risks,
-        args.min_severity,
+        args.min_severity.into(),
         args.only_direct,
         args.only_fixable,
     );
@@ -30,9 +28,8 @@ fn main() {
     if args.cli {
         terminal::formatted_result(sorted_risks);
     } else {
-        if let Err(e) = tui::run(sorted_risks) {
-            eprintln!("TUI error: {}", e);
-            exit(1);
-        }
+        tui::run(sorted_risks)?;
     }
+
+    Ok(())
 }

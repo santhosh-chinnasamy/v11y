@@ -1,23 +1,24 @@
 use crate::model::NpmAudit;
+use color_eyre::eyre::{eyre, Result, WrapErr};
 use std::process::Command;
 
-pub fn npm() -> Result<NpmAudit, String> {
+pub fn npm() -> Result<NpmAudit> {
     let output = Command::new("npm")
         .arg("audit")
         .arg("--json")
         .output()
-        .map_err(|e| format!("Failed to execute npm audit: {}", e))?;
+        .wrap_err("Failed to execute npm audit")?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     parse_npm_json(&stdout)
 }
 
-pub fn parse_npm_json(stdout: &str) -> Result<NpmAudit, String> {
+pub fn parse_npm_json(stdout: &str) -> Result<NpmAudit> {
     if stdout.trim().is_empty() {
-        return Err("npm audit produced empty output".to_string());
+        return Err(eyre!("npm audit produced empty output"));
     }
 
-    serde_json::from_str(stdout).map_err(|e| format!("Failed to parse npm audit JSON: {}", e))
+    serde_json::from_str(stdout).wrap_err("Failed to parse npm audit JSON")
 }
 
 #[cfg(test)]
@@ -39,14 +40,14 @@ mod tests {
     #[test]
     fn empty_output_is_error() {
         let err = parse_npm_json("").unwrap_err();
-        assert!(err.contains("empty"));
+        assert!(err.to_string().contains("empty"));
     }
 
     #[test]
     fn test_invalid_json_returns_error() {
         let result = parse_npm_json("{invalid json");
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("parse"));
+        assert!(result.unwrap_err().to_string().contains("parse"));
     }
 
     #[test]

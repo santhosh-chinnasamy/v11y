@@ -2,7 +2,6 @@ use core::fmt;
 use std::cmp::Reverse;
 
 use crate::model::{NpmAudit, ViaAdvisory, ViaEntry};
-use clap::ValueEnum;
 
 #[derive(Debug)]
 pub struct PackageRisk {
@@ -14,7 +13,7 @@ pub struct PackageRisk {
     pub advisory: Option<Vec<ViaAdvisory>>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Severity {
     Low,
     Moderate,

@@ -6,7 +6,7 @@ use ratatui::{
         ExecutableCommand,
         event::{self, Event, KeyCode, KeyEvent, KeyEventKind},
         terminal::{
-            self, EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
+            EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
         },
     },
     prelude::*,
@@ -62,6 +62,9 @@ impl App {
     }
 
     fn toggle_popup(&mut self) {
+        if self.risks.is_empty() {
+            return;
+        }
         self.is_popup_open = !self.is_popup_open;
         if self.is_popup_open {
             self.popup_scroll = 0;
@@ -80,6 +83,9 @@ impl App {
     }
 
     fn next(&mut self) {
+        if self.risks.is_empty() {
+            return;
+        }
         let i = match self.state.selected() {
             Some(i) => {
                 if i >= self.risks.len() - 1 {
@@ -94,6 +100,9 @@ impl App {
     }
 
     fn previous(&mut self) {
+        if self.risks.is_empty() {
+            return;
+        }
         let i = match self.state.selected() {
             Some(i) => {
                 if i == 0 {
