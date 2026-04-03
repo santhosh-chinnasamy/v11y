@@ -21,8 +21,8 @@ cargo install --path .
 
 - [x] Scan for vulnerabilities using `npm audit`
 - [x] Display results in a TUI
-- [ ] Show detailed information about each vulnerability
-- [ ] Filter vulnerabilities by severity
+- [x] Show detailed information about each vulnerability
+- [x] Filter vulnerabilities by severity
 - [ ] Export results to a file (e.g., JSON, CSV)
 - [ ] Integrate with CI/CD pipelines
 - [ ] Upgrade vulnerable dependencies by selecting them in the TUI

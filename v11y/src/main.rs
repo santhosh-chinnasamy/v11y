@@ -1,10 +1,9 @@
 use clap::Parser;
 use color_eyre::Result;
+use v11y_core::risk;
 
 mod audit;
 mod cli;
-mod model;
-mod risk;
 mod terminal;
 mod tui;
 

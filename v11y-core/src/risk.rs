@@ -165,8 +165,11 @@ pub fn filter_risks(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::audit::parse_npm_json;
     use std::fs;
+
+    fn parse_npm_json(stdout: &str) -> color_eyre::Result<crate::model::NpmAudit> {
+        serde_json::from_str(stdout).map_err(Into::into)
+    }
 
     fn sample_risks() -> Vec<PackageRisk> {
         vec![
