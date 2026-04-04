@@ -49,9 +49,32 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
 }
 
 fn handle_key_event(key: KeyEvent, app: &mut App) {
+    if app.show_help {
+        app.show_help = false;
+        return;
+    }
+
     match key.code {
-        KeyCode::Char('q') | KeyCode::Esc => app.should_quit = true,
-        KeyCode::Tab | KeyCode::Right | KeyCode::Left => app.toggle_pane(),
+        KeyCode::Char('q') => app.should_quit = true,
+        KeyCode::Esc => {
+            if app.show_details {
+                app.show_details = false;
+                app.active_pane = ActivePane::List;
+            } else {
+                app.should_quit = true;
+            }
+        },
+        KeyCode::Char('?') => app.show_help = true,
+        KeyCode::Tab => app.toggle_pane(),
+        KeyCode::Right => {
+            app.show_details = true;
+            app.active_pane = ActivePane::Details;
+        },
+        KeyCode::Left => app.active_pane = ActivePane::List,
+        KeyCode::Enter => {
+            app.show_details = !app.show_details;
+            app.active_pane = ActivePane::List;
+        },
         KeyCode::Char('l') => app.toggle_filter(Severity::Low),
         KeyCode::Char('m') => app.toggle_filter(Severity::Moderate),
         KeyCode::Char('h') => app.toggle_filter(Severity::High),

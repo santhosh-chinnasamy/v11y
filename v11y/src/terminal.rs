@@ -8,7 +8,7 @@ pub fn formatted_result(report: AuditReport) {
     println!("\n📦 Dependencies - Total: {} | Dev: {} | Optional: {} | Vulnerable Packages: {} (Fixable: {})", 
         metrics.total_dependencies, metrics.dev_dependencies, metrics.optional_dependencies, metrics.total_vulns, metrics.fixable);
     println!("🚨 Vulnerabilities - Critical: {} | High: {} | Moderate: {} | Low: {}", 
-        metrics.total_vulns, metrics.fixable, metrics.critical, metrics.high, metrics.moderate, metrics.low);
+        metrics.critical, metrics.high, metrics.moderate, metrics.low);
     println!();
 
     let mut table = Table::new();
