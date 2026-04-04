@@ -136,6 +136,7 @@ fn render_list(f: &mut Frame, app: &mut App, area: Rect) {
     }
 
     let header = Row::new(vec![
+        Cell::from("S.No.").style(Style::default().fg(Color::Gray)),
         Cell::from("PACKAGE").style(Style::default().fg(Color::Gray)),
         Cell::from("SEVERITY").style(Style::default().fg(Color::Gray)),
         Cell::from("VULNS").style(Style::default().fg(Color::Gray)),
@@ -159,7 +160,12 @@ fn render_list(f: &mut Frame, app: &mut App, area: Rect) {
                 Color::Reset
             };
 
-            let pkg_line1 = Line::from(Span::styled(risk.name.clone(), Style::default().fg(Color::White).bold()));
+            let sno = Cell::from((i + 1).to_string()).style(Style::default().bg(bg_color));
+
+            let pkg_line1 = Line::from(Span::styled(
+                risk.name.clone(),
+                Style::default().fg(Color::White).bold(),
+            ));
             let via_text = if risk.is_direct {
                 "direct dep".to_string()
             } else if !risk.transitive_causes.is_empty() {
@@ -191,6 +197,7 @@ fn render_list(f: &mut Frame, app: &mut App, area: Rect) {
             };
 
             Row::new(vec![
+                sno,
                 pkg_cell,
                 severity_cell,
                 vulns_cell,
@@ -201,11 +208,12 @@ fn render_list(f: &mut Frame, app: &mut App, area: Rect) {
         .collect();
 
     let widths = [
+        Constraint::Percentage(5),
         Constraint::Percentage(40),
         Constraint::Percentage(20),
         Constraint::Percentage(15),
         Constraint::Percentage(10),
-        Constraint::Percentage(15),
+        Constraint::Percentage(10),
     ];
 
     let table = Table::new(rows, widths)
