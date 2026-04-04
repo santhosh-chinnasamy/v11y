@@ -1,6 +1,6 @@
+use crate::model::{Advisory, AuditReport, Metrics, PackageRisk, Severity};
 use serde::Deserialize;
 use std::collections::HashMap;
-use crate::model::{PackageRisk, Severity, Advisory, AuditReport, Metrics};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct NpmAudit {
@@ -125,7 +125,7 @@ pub(crate) fn build_report_from_npm(audit: NpmAudit) -> AuditReport {
             serde_json::Value::Object(_) => true,
             _ => false,
         };
-        
+
         if has_fix {
             fixable += 1;
         }
@@ -230,7 +230,7 @@ mod tests {
         assert_eq!(vite.max_severity, Severity::Moderate);
         assert!(vite.is_direct);
         assert!(!vite.advisories.is_empty());
-        
+
         // Check metrics
         assert_eq!(report.metrics.total_vulns, 13);
         assert_eq!(report.metrics.low, 3);
