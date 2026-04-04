@@ -1,121 +1,5 @@
-use core::fmt;
 use std::cmp::Reverse;
-
-use crate::model::{NpmAudit, ViaAdvisory, ViaEntry};
-
-#[derive(Debug, Clone)]
-pub struct PackageRisk {
-    pub name: String,
-    pub is_direct: bool,
-    pub max_severity: Severity,
-    pub vulnerability_count: usize,
-    pub has_fix: bool,
-    pub effects: Vec<String>,
-    pub range: String,
-    pub nodes: Vec<String>,
-    pub transitive_causes: Vec<String>,
-    pub advisory: Option<Vec<ViaAdvisory>>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Severity {
-    Low,
-    Moderate,
-    High,
-    Critical,
-}
-
-impl fmt::Display for Severity {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let value = match self {
-            Severity::Low => "low",
-            Severity::Moderate => "moderate",
-            Severity::High => "high",
-            Severity::Critical => "critical",
-        };
-
-        write!(f, "{}", value)
-    }
-}
-
-impl Severity {
-    fn from_npm(s: &str) -> Option<Self> {
-        match s {
-            "low" => Some(Severity::Low),
-            "moderate" => Some(Severity::Moderate),
-            "high" => Some(Severity::High),
-            "critical" => Some(Severity::Critical),
-            _ => None,
-        }
-    }
-}
-
-pub fn build_package_risk(audit: NpmAudit) -> Vec<PackageRisk> {
-    let mut result = Vec::new();
-
-    for (pkg_name, vulns) in audit.vulnerabilities {
-        // Count only real advisories, not dependency strings
-        let advisory_count = vulns
-            .via
-            .iter()
-            .filter(|v| matches!(v, ViaEntry::Advisory(_)))
-            .count();
-
-        let has_fix = match vulns.fix_available {
-            serde_json::Value::Bool(b) => b,
-            serde_json::Value::Object(_) => true,
-            _ => false,
-        };
-        let max_sev = max_severity(&vulns.via).unwrap_or(Severity::Low);
-
-        let transitive_causes: Vec<String> = vulns
-            .via
-            .iter()
-            .filter_map(|v| match v {
-                ViaEntry::Package(p) => Some(p.clone()),
-                _ => None,
-            })
-            .collect();
-
-        result.push(PackageRisk {
-            name: pkg_name,
-            is_direct: vulns.is_direct,
-            vulnerability_count: advisory_count,
-            has_fix,
-            max_severity: max_sev,
-            effects: vulns.effects,
-            range: vulns.range,
-            nodes: vulns.nodes,
-            transitive_causes,
-            advisory: {
-                let advisories: Vec<_> = vulns
-                    .via
-                    .iter()
-                    .filter_map(|v| match v {
-                        ViaEntry::Advisory(advisory) => Some(advisory.clone()),
-                        _ => None,
-                    })
-                    .collect();
-                if advisories.is_empty() {
-                    None
-                } else {
-                    Some(advisories)
-                }
-            },
-        });
-    }
-
-    result
-}
-
-fn max_severity(via: &[ViaEntry]) -> Option<Severity> {
-    via.iter()
-        .filter_map(|entry| match entry {
-            ViaEntry::Advisory(advisory) => Severity::from_npm(&advisory.severity),
-            _ => None,
-        })
-        .max()
-}
+use crate::model::{PackageRisk, Severity, Metrics};
 
 /// Risk score calculation:
 /// - Base: Critical=100, High=60, Moderate=30, Low=10
@@ -162,14 +46,37 @@ pub fn filter_risks(
         .collect()
 }
 
+pub fn compute_metrics(risks: &[PackageRisk]) -> Metrics {
+    let mut metrics = Metrics {
+        total_packages: risks.len(),
+        total_vulns: 0,
+        fixable: 0,
+        critical: 0,
+        high: 0,
+        moderate: 0,
+        low: 0,
+    };
+
+    for risk in risks {
+        metrics.total_vulns += risk.vulnerability_count;
+        if risk.has_fix {
+            metrics.fixable += 1;
+        }
+        match risk.max_severity {
+            Severity::Critical => metrics.critical += 1,
+            Severity::High => metrics.high += 1,
+            Severity::Moderate => metrics.moderate += 1,
+            Severity::Low => metrics.low += 1,
+        }
+    }
+
+    metrics
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
-
-    fn parse_npm_json(stdout: &str) -> color_eyre::Result<crate::model::NpmAudit> {
-        serde_json::from_str(stdout).map_err(Into::into)
-    }
+    use crate::model::Advisory;
 
     fn sample_risks() -> Vec<PackageRisk> {
         vec![
@@ -183,7 +90,7 @@ mod tests {
                 range: "".to_string(),
                 nodes: vec![],
                 transitive_causes: vec![],
-                advisory: None,
+                advisories: vec![],
             },
             PackageRisk {
                 name: "direct-notfixable-high".into(),
@@ -195,7 +102,7 @@ mod tests {
                 range: "".to_string(),
                 nodes: vec![],
                 transitive_causes: vec![],
-                advisory: None,
+                advisories: vec![],
             },
             PackageRisk {
                 name: "transitive-fixable-low".into(),
@@ -207,7 +114,7 @@ mod tests {
                 range: "".to_string(),
                 nodes: vec![],
                 transitive_causes: vec![],
-                advisory: None,
+                advisories: vec![],
             },
         ]
     }
@@ -217,114 +124,6 @@ mod tests {
         assert!(Severity::Critical > Severity::High);
         assert!(Severity::High > Severity::Moderate);
         assert!(Severity::Moderate > Severity::Low);
-    }
-
-    #[test]
-    fn max_severity_picks_highest_from_via() {
-        use crate::model::ViaAdvisory;
-
-        let via = vec![
-            ViaEntry::Package("dep-a".to_string()),
-            ViaEntry::Advisory(ViaAdvisory {
-                name: "pkg".into(),
-                title: "test".into(),
-                severity: "moderate".into(),
-                url: "http://example.com".into(),
-                dependency: None,
-                range: None,
-                cwe: vec![],
-                cvss: None,
-            }),
-            ViaEntry::Advisory(ViaAdvisory {
-                name: "pkg".into(),
-                title: "test".into(),
-                severity: "high".into(),
-                url: "http://example.com".into(),
-                dependency: None,
-                range: None,
-                cwe: vec![],
-                cvss: None,
-            }),
-        ];
-
-        assert_eq!(max_severity(&via), Some(Severity::High));
-    }
-
-    #[test]
-    fn builds_single_package_risk_per_package() {
-        use crate::model::{NpmVulnerability, ViaAdvisory};
-        use std::collections::HashMap;
-
-        let mut vulnerabilities = HashMap::new();
-
-        vulnerabilities.insert(
-            "vite".to_string(),
-            NpmVulnerability {
-                name: "vite".into(),
-                is_direct: true,
-                severity: "high".into(),
-                fix_available: serde_json::Value::Bool(true),
-                range: ">=4.0.0".into(),
-                nodes: vec![],
-                effects: vec![],
-                via: vec![
-                    ViaEntry::Advisory(ViaAdvisory {
-                        name: "vite".into(),
-                        title: "test".into(),
-                        severity: "moderate".into(),
-                        url: "http://example.com".into(),
-                        dependency: None,
-                        range: None,
-                        cwe: vec![],
-                        cvss: None,
-                    }),
-                    ViaEntry::Advisory(ViaAdvisory {
-                        name: "vite".into(),
-                        title: "test".into(),
-                        severity: "high".into(),
-                        url: "http://example.com".into(),
-                        dependency: None,
-                        range: None,
-                        cwe: vec![],
-                        cvss: None,
-                    }),
-                ],
-            },
-        );
-
-        let audit = NpmAudit {
-            audit_report_version: 2,
-            metadata: Default::default(),
-            vulnerabilities,
-        };
-
-        let risks = build_package_risk(audit);
-
-        assert_eq!(risks.len(), 1);
-        assert_eq!(risks[0].name, "vite");
-        assert_eq!(risks[0].vulnerability_count, 2);
-        assert_eq!(risks[0].max_severity, Severity::High);
-        assert!(risks[0].is_direct);
-        assert_eq!(risks[0].advisory.as_ref().unwrap().len(), 2);
-        assert_eq!(risks[0].advisory.as_ref().unwrap()[0].severity, "moderate");
-        assert_eq!(risks[0].advisory.as_ref().unwrap()[1].severity, "high");
-    }
-
-    #[test]
-    fn builds_package_risk_from_audit_fixture() {
-        let json =
-            fs::read_to_string("tests/fixtures/npm-audit.json").expect("failed to read fixture");
-
-        let audit = parse_npm_json(&json).expect("failed to parse npm audit JSON");
-
-        let risks = build_package_risk(audit);
-        let vite = risks.iter().find(|risk| risk.name == "vite").unwrap();
-
-        assert_eq!(risks.len(), 13);
-        assert_eq!(vite.name, "vite");
-        assert_eq!(vite.vulnerability_count, 11);
-        assert_eq!(vite.max_severity, Severity::Moderate);
-        assert!(vite.is_direct);
     }
 
     #[test]
@@ -339,7 +138,7 @@ mod tests {
             range: "".to_string(),
             nodes: vec![],
             transitive_causes: vec![],
-            advisory: None,
+            advisories: vec![],
         };
 
         let high_direct = PackageRisk {
@@ -352,7 +151,7 @@ mod tests {
             range: "".to_string(),
             nodes: vec![],
             transitive_causes: vec![],
-            advisory: None,
+            advisories: vec![],
         };
 
         assert!(risk_score(&high_direct) > risk_score(&low_transitive));
@@ -433,7 +232,7 @@ mod tests {
                 range: "".to_string(),
                 nodes: vec![],
                 transitive_causes: vec![],
-                advisory: None,
+                advisories: vec![],
             },
             PackageRisk {
                 name: "critical".into(),
@@ -445,7 +244,7 @@ mod tests {
                 range: "".to_string(),
                 nodes: vec![],
                 transitive_causes: vec![],
-                advisory: None,
+                advisories: vec![],
             },
             PackageRisk {
                 name: "high".into(),
@@ -457,7 +256,7 @@ mod tests {
                 range: "".to_string(),
                 nodes: vec![],
                 transitive_causes: vec![],
-                advisory: None,
+                advisories: vec![],
             },
         ];
 
@@ -487,7 +286,7 @@ mod tests {
             range: "".to_string(),
             nodes: vec![],
             transitive_causes: vec![],
-            advisory: None,
+            advisories: vec![],
         };
 
         let without_fix = PackageRisk {
@@ -500,7 +299,7 @@ mod tests {
             range: "".to_string(),
             nodes: vec![],
             transitive_causes: vec![],
-            advisory: None,
+            advisories: vec![],
         };
 
         // Score difference should be 30 (10 for has_fix vs -20 for no fix)
@@ -520,7 +319,7 @@ mod tests {
                 range: "".to_string(),
                 nodes: vec![],
                 transitive_causes: vec![],
-                advisory: None,
+                advisories: vec![],
             },
             PackageRisk {
                 name: "indirect".into(),
@@ -532,7 +331,7 @@ mod tests {
                 range: "".to_string(),
                 nodes: vec![],
                 transitive_causes: vec![],
-                advisory: None,
+                advisories: vec![],
             },
             PackageRisk {
                 name: "no-fix".into(),
@@ -544,7 +343,7 @@ mod tests {
                 range: "".to_string(),
                 nodes: vec![],
                 transitive_causes: vec![],
-                advisory: None,
+                advisories: vec![],
             },
             PackageRisk {
                 name: "low-severity".into(),
@@ -556,7 +355,7 @@ mod tests {
                 range: "".to_string(),
                 nodes: vec![],
                 transitive_causes: vec![],
-                advisory: None,
+                advisories: vec![],
             },
         ];
 
@@ -564,5 +363,57 @@ mod tests {
 
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].name, "match");
+    }
+
+    #[test]
+    fn test_compute_metrics() {
+        let risks = vec![
+            PackageRisk {
+                name: "pkg1".to_string(),
+                is_direct: true,
+                max_severity: Severity::Critical,
+                vulnerability_count: 5,
+                has_fix: true,
+                effects: vec![],
+                range: "".to_string(),
+                nodes: vec![],
+                transitive_causes: vec![],
+                advisories: vec![],
+            },
+            PackageRisk {
+                name: "pkg2".to_string(),
+                is_direct: false,
+                max_severity: Severity::High,
+                vulnerability_count: 2,
+                has_fix: false,
+                effects: vec![],
+                range: "".to_string(),
+                nodes: vec![],
+                transitive_causes: vec![],
+                advisories: vec![],
+            },
+            PackageRisk {
+                name: "pkg3".to_string(),
+                is_direct: true,
+                max_severity: Severity::Low,
+                vulnerability_count: 1,
+                has_fix: true,
+                effects: vec![],
+                range: "".to_string(),
+                nodes: vec![],
+                transitive_causes: vec![],
+                advisories: vec![],
+            },
+        ];
+
+        let metrics = compute_metrics(&risks);
+
+        assert_eq!(metrics.total_packages, 3);
+        assert_eq!(metrics.total_vulns, 8);
+        assert_eq!(metrics.fixable, 2);
+        assert_eq!(metrics.critical, 1);
+        assert_eq!(metrics.high, 1);
+        assert_eq!(metrics.moderate, 0);
+        assert_eq!(metrics.low, 1);
     }
 }

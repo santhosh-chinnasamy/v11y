@@ -1,6 +1,6 @@
 use comfy_table::*;
 
-use v11y_core::risk::PackageRisk;
+use v11y_core::model::PackageRisk;
 
 pub fn formatted_result(risks: Vec<PackageRisk>) {
     let mut table = Table::new();
