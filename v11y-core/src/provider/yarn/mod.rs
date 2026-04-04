@@ -1,7 +1,7 @@
-use std::process::Command;
-use color_eyre::eyre::{eyre, Result, WrapErr};
-use crate::model::AuditReport;
 use super::AuditProvider;
+use crate::model::AuditReport;
+use color_eyre::eyre::{Result, WrapErr, eyre};
+use std::process::Command;
 
 mod model;
 use model::parse_yarn_audit;

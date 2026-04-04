@@ -1,5 +1,5 @@
+use crate::model::{Metrics, PackageRisk, Severity};
 use std::cmp::Reverse;
-use crate::model::{PackageRisk, Severity, Metrics};
 
 /// Risk score calculation:
 /// - Base: Critical=100, High=60, Moderate=30, Low=10

@@ -1,6 +1,6 @@
 use clap::Parser;
 use color_eyre::Result;
-use v11y_core::provider::{detect_provider, npm::NpmProvider, yarn::YarnProvider, AuditProvider};
+use v11y_core::provider::{AuditProvider, detect_provider, npm::NpmProvider, yarn::YarnProvider};
 use v11y_core::risk;
 
 mod cli;
@@ -18,7 +18,7 @@ fn main() -> Result<()> {
         Some(PackageManager::Yarn) => Box::new(YarnProvider),
         None => detect_provider(),
     };
-    
+
     let mut report = provider.audit()?;
 
     report.risks = risk::filter_risks(

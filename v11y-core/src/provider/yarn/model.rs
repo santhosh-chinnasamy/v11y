@@ -1,6 +1,6 @@
+use crate::model::{Advisory, AuditReport, Metrics, PackageRisk, Severity};
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
-use crate::model::{PackageRisk, Severity, Advisory, Metrics, AuditReport};
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type")]
@@ -99,8 +99,9 @@ pub(crate) fn parse_yarn_audit(raw_output: &str) -> AuditReport {
                 let critical = *data.vulnerabilities.get("critical").unwrap_or(&0);
                 let high = *data.vulnerabilities.get("high").unwrap_or(&0);
                 let moderate = *data.vulnerabilities.get("moderate").unwrap_or(&0);
-                let low = *data.vulnerabilities.get("low").unwrap_or(&0) + *data.vulnerabilities.get("info").unwrap_or(&0);
-                
+                let low = *data.vulnerabilities.get("low").unwrap_or(&0)
+                    + *data.vulnerabilities.get("info").unwrap_or(&0);
+
                 total_vulns = critical + high + moderate + low;
 
                 official_metrics = Some(Metrics {
@@ -135,7 +136,7 @@ pub(crate) fn parse_yarn_audit(raw_output: &str) -> AuditReport {
 
         for event in events {
             let adv = event.advisory;
-            
+
             let sev = Severity::from_yarn(&adv.severity).unwrap_or(Severity::Low);
             if sev > max_sev {
                 max_sev = sev;
@@ -181,7 +182,7 @@ pub(crate) fn parse_yarn_audit(raw_output: &str) -> AuditReport {
 
         let mut nodes: Vec<_> = nodes.into_iter().collect();
         nodes.sort();
-        
+
         let mut transitive_causes: Vec<_> = transitive_causes.into_iter().collect();
         transitive_causes.sort();
 
@@ -215,10 +216,22 @@ pub(crate) fn parse_yarn_audit(raw_output: &str) -> AuditReport {
             total_packages: risks.len(),
             total_vulns: risks.iter().map(|r| r.vulnerability_count).sum(),
             fixable: fixable_count,
-            critical: risks.iter().filter(|r| r.max_severity == Severity::Critical).count(),
-            high: risks.iter().filter(|r| r.max_severity == Severity::High).count(),
-            moderate: risks.iter().filter(|r| r.max_severity == Severity::Moderate).count(),
-            low: risks.iter().filter(|r| r.max_severity == Severity::Low).count(),
+            critical: risks
+                .iter()
+                .filter(|r| r.max_severity == Severity::Critical)
+                .count(),
+            high: risks
+                .iter()
+                .filter(|r| r.max_severity == Severity::High)
+                .count(),
+            moderate: risks
+                .iter()
+                .filter(|r| r.max_severity == Severity::Moderate)
+                .count(),
+            low: risks
+                .iter()
+                .filter(|r| r.max_severity == Severity::Low)
+                .count(),
         }
     };
 
@@ -239,10 +252,10 @@ mod tests {
         let json = load_fixture();
         let report = parse_yarn_audit(&json);
         let risks = report.risks;
-        
+
         assert!(!risks.is_empty());
         let vite = risks.iter().find(|r| r.name == "vite").unwrap();
-        
+
         assert_eq!(vite.name, "vite");
         assert_eq!(vite.max_severity, Severity::Moderate);
         assert!(vite.has_fix);
@@ -261,11 +274,14 @@ mod tests {
         let json = load_fixture();
         let report = parse_yarn_audit(&json);
         let risks = report.risks;
-        
+
         let tar = risks.iter().find(|r| r.name == "tar").unwrap();
-        
+
         assert!(!tar.is_direct);
         assert_eq!(tar.max_severity, Severity::High);
-        assert!(tar.transitive_causes.contains(&"@tailwindcss/vite".to_string()));
+        assert!(
+            tar.transitive_causes
+                .contains(&"@tailwindcss/vite".to_string())
+        );
     }
 }

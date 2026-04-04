@@ -1,7 +1,7 @@
 use std::fmt;
 
-use v11y_core::model::Severity;
 use clap::{Parser, ValueEnum};
+use v11y_core::model::Severity;
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum CliSeverity {

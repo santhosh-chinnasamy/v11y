@@ -1,13 +1,13 @@
-use std::io::{self, stdout};
 use ratatui::{
+    Terminal,
     backend::Backend,
     crossterm::{
-        event::{self, Event, KeyCode, KeyEvent, KeyEventKind},
-        terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
         ExecutableCommand,
+        event::{self, Event, KeyCode, KeyEvent, KeyEventKind},
+        terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
     },
-    Terminal,
 };
+use std::io::{self, stdout};
 use v11y_core::model::{AuditReport, Severity};
 
 pub mod app;
@@ -63,18 +63,18 @@ fn handle_key_event(key: KeyEvent, app: &mut App) {
             } else {
                 app.should_quit = true;
             }
-        },
+        }
         KeyCode::Char('?') => app.show_help = true,
         KeyCode::Tab => app.toggle_pane(),
         KeyCode::Right => {
             app.show_details = true;
             app.active_pane = ActivePane::Details;
-        },
+        }
         KeyCode::Left => app.active_pane = ActivePane::List,
         KeyCode::Enter => {
             app.show_details = !app.show_details;
             app.active_pane = ActivePane::List;
-        },
+        }
         KeyCode::Char('l') => app.toggle_filter(Severity::Low),
         KeyCode::Char('m') => app.toggle_filter(Severity::Moderate),
         KeyCode::Char('h') => app.toggle_filter(Severity::High),

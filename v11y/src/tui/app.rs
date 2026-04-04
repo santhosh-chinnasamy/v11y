@@ -1,6 +1,6 @@
 use ratatui::widgets::TableState;
 use v11y_core::{
-    model::{PackageRisk, Severity, AuditReport},
+    model::{AuditReport, PackageRisk, Severity},
     risk,
 };
 
@@ -74,7 +74,8 @@ impl App {
         } else {
             if let Some(selected) = self.state.selected() {
                 if selected >= self.filtered_risks.len() {
-                    self.state.select(Some(self.filtered_risks.len().saturating_sub(1)));
+                    self.state
+                        .select(Some(self.filtered_risks.len().saturating_sub(1)));
                 }
             } else {
                 self.state.select(Some(0));

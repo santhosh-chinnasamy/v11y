@@ -1,5 +1,5 @@
-use color_eyre::Result;
 use crate::model::AuditReport;
+use color_eyre::Result;
 use std::path::Path;
 
 pub mod npm;
