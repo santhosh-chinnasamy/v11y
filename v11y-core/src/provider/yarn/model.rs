@@ -104,6 +104,9 @@ pub(crate) fn parse_yarn_audit(raw_output: &str) -> AuditReport {
                 total_vulns = critical + high + moderate + low;
 
                 official_metrics = Some(Metrics {
+                    total_dependencies: data.dependencies,
+                    dev_dependencies: data.dev_dependencies,
+                    optional_dependencies: data.optional_dependencies,
                     total_packages: 0, // Will be filled later
                     total_vulns,
                     fixable: 0, // Will be filled later
@@ -206,6 +209,9 @@ pub(crate) fn parse_yarn_audit(raw_output: &str) -> AuditReport {
     } else {
         // Fallback calculation
         Metrics {
+            total_dependencies: 0,
+            dev_dependencies: 0,
+            optional_dependencies: 0,
             total_packages: risks.len(),
             total_vulns: risks.iter().map(|r| r.vulnerability_count).sum(),
             fixable: fixable_count,

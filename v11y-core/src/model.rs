@@ -48,6 +48,9 @@ pub struct Advisory {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Metrics {
+    pub total_dependencies: usize,
+    pub dev_dependencies: usize,
+    pub optional_dependencies: usize,
     pub total_packages: usize,
     pub total_vulns: usize,
     pub fixable: usize,

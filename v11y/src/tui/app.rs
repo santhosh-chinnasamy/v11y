@@ -1,6 +1,6 @@
 use ratatui::widgets::TableState;
 use v11y_core::{
-    model::{PackageRisk, Severity, AuditReport, Metrics},
+    model::{PackageRisk, Severity, AuditReport},
     risk,
 };
 
