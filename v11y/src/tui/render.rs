@@ -5,7 +5,6 @@ use ratatui::{
 };
 use v11y_core::{
     model::{Advisory, Severity},
-    risk,
 };
 
 use super::app::{ActivePane, App};
@@ -34,7 +33,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
 }
 
 fn render_summary(f: &mut Frame, app: &mut App, area: Rect) {
-    let metrics = risk::compute_metrics(&app.all_risks);
+    let metrics = &app.report.metrics;
 
     let summary_text = Line::from(vec![
         Span::from(format!(
@@ -166,6 +165,7 @@ fn render_details(f: &mut Frame, app: &mut App, area: Rect) {
 
     let selected_risk = &app.filtered_risks[app.state.selected().unwrap()];
     let title = Line::from(vec![
+        Span::from(" Advisory for "),
         Span::from(selected_risk.name.clone()).bold(),
         Span::from(" "),
     ]);

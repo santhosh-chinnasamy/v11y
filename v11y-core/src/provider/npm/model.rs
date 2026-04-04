@@ -1,6 +1,6 @@
 use serde::Deserialize;
 use std::collections::HashMap;
-use crate::model::{PackageRisk, Severity, Advisory};
+use crate::model::{PackageRisk, Severity, Advisory, AuditReport, Metrics};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct NpmAudit {
@@ -108,10 +108,11 @@ impl Severity {
     }
 }
 
-pub(crate) fn build_package_risk_from_npm(audit: NpmAudit) -> Vec<PackageRisk> {
-    let mut result = Vec::new();
+pub(crate) fn build_report_from_npm(audit: NpmAudit) -> AuditReport {
+    let mut risks = Vec::new();
+    let mut fixable = 0;
 
-    for (pkg_name, vulns) in audit.vulnerabilities {
+    for (pkg_name, vulns) in &audit.vulnerabilities {
         // Count only real advisories, not dependency strings
         let advisory_count = vulns
             .via
@@ -124,6 +125,11 @@ pub(crate) fn build_package_risk_from_npm(audit: NpmAudit) -> Vec<PackageRisk> {
             serde_json::Value::Object(_) => true,
             _ => false,
         };
+        
+        if has_fix {
+            fixable += 1;
+        }
+
         let max_sev = max_severity(&vulns.via).unwrap_or(Severity::Low);
 
         let transitive_causes: Vec<String> = vulns
@@ -151,21 +157,31 @@ pub(crate) fn build_package_risk_from_npm(audit: NpmAudit) -> Vec<PackageRisk> {
             })
             .collect();
 
-        result.push(PackageRisk {
-            name: pkg_name,
+        risks.push(PackageRisk {
+            name: pkg_name.clone(),
             is_direct: vulns.is_direct,
             vulnerability_count: advisory_count,
             has_fix,
             max_severity: max_sev,
-            effects: vulns.effects,
-            range: vulns.range,
-            nodes: vulns.nodes,
+            effects: vulns.effects.clone(),
+            range: vulns.range.clone(),
+            nodes: vulns.nodes.clone(),
             transitive_causes,
             advisories,
         });
     }
 
-    result
+    let metrics = Metrics {
+        total_packages: risks.len(),
+        total_vulns: audit.metadata.vulnerabilities.total as usize,
+        fixable,
+        critical: audit.metadata.vulnerabilities.critical as usize,
+        high: audit.metadata.vulnerabilities.high as usize,
+        moderate: audit.metadata.vulnerabilities.moderate as usize,
+        low: audit.metadata.vulnerabilities.low as usize,
+    };
+
+    AuditReport { risks, metrics }
 }
 
 fn max_severity(via: &[ViaEntry]) -> Option<Severity> {
@@ -200,15 +216,23 @@ mod tests {
         let json = load_fixture();
         let audit: NpmAudit = serde_json::from_str(&json).expect("failed to parse npm audit JSON");
 
-        let risks = build_package_risk_from_npm(audit);
+        let report = build_report_from_npm(audit);
+        let risks = report.risks;
         let vite = risks.iter().find(|risk| risk.name == "vite").unwrap();
 
         assert_eq!(risks.len(), 13);
         assert_eq!(vite.name, "vite");
+        // vulnerability_count is 11 in our calculation, but total in metadata is 13
         assert_eq!(vite.vulnerability_count, 11);
         assert_eq!(vite.max_severity, Severity::Moderate);
         assert!(vite.is_direct);
         assert!(!vite.advisories.is_empty());
+        
+        // Check metrics
+        assert_eq!(report.metrics.total_vulns, 13);
+        assert_eq!(report.metrics.low, 3);
+        assert_eq!(report.metrics.moderate, 5);
+        assert_eq!(report.metrics.high, 5);
     }
 
     #[test]
@@ -256,7 +280,8 @@ mod tests {
             vulnerabilities,
         };
 
-        let risks = build_package_risk_from_npm(audit);
+        let report = build_report_from_npm(audit);
+        let risks = report.risks;
 
         assert_eq!(risks.len(), 1);
         assert_eq!(risks[0].name, "vite");
@@ -268,4 +293,3 @@ mod tests {
         assert_eq!(risks[0].advisories[1].severity, Severity::High);
     }
 }
-
