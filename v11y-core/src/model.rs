@@ -1,97 +1,58 @@
-use serde::Deserialize;
-use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
+use core::fmt;
 
-#[derive(Debug, Deserialize, Clone)]
-pub struct NpmAudit {
-    #[serde(rename = "auditReportVersion")]
-    pub audit_report_version: u8,
-    pub metadata: Metadata,
-    pub vulnerabilities: HashMap<String, NpmVulnerability>,
-}
-
-#[derive(Debug, Deserialize, Default, Clone)]
-
-pub struct Metadata {
-    pub dependencies: DependencyCount,
-    pub vulnerabilities: VulnerabilityCount,
-}
-
-#[derive(Debug, Deserialize, Default, Clone)]
-pub struct DependencyCount {
-    pub dev: u32,
-    pub optional: u32,
-    pub peer: u32,
-    #[serde(rename = "peerOptional")]
-    pub peer_optional: u32,
-    pub prod: u32,
-    pub total: u32,
-}
-
-#[derive(Debug, Deserialize, Default, Clone)]
-pub struct VulnerabilityCount {
-    pub critical: u32,
-    pub high: u32,
-    pub moderate: u32,
-    pub low: u32,
-    pub info: u32,
-    pub total: u32,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct NpmVulnerability {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PackageRisk {
     pub name: String,
-
-    #[serde(rename = "isDirect")]
     pub is_direct: bool,
-
-    pub severity: String,
-
-    #[serde(rename = "fixAvailable")]
-    pub fix_available: serde_json::Value, // boolean or object
-
-    pub range: String,
-
-    pub nodes: Vec<String>,
-
-    #[serde(default)]
+    pub max_severity: Severity,
+    pub vulnerability_count: usize,
+    pub has_fix: bool,
     pub effects: Vec<String>,
-
-    pub via: Vec<ViaEntry>,
+    pub range: String,
+    pub nodes: Vec<String>,
+    pub transitive_causes: Vec<String>,
+    pub advisories: Vec<Advisory>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
-#[serde(untagged)]
-pub enum ViaEntry {
-    /// Transitive dependency
-    Package(String),
-
-    /// Full Advisory
-    Advisory(ViaAdvisory),
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum Severity {
+    Low,
+    Moderate,
+    High,
+    Critical,
 }
 
-#[derive(Debug, Deserialize, Clone)]
-pub struct ViaAdvisory {
-    pub name: String,
-    pub severity: String,
+impl fmt::Display for Severity {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let value = match self {
+            Severity::Low => "low",
+            Severity::Moderate => "moderate",
+            Severity::High => "high",
+            Severity::Critical => "critical",
+        };
+
+        write!(f, "{}", value)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Advisory {
     pub title: String,
     pub url: String,
-
-    #[serde(default)]
-    pub dependency: Option<String>,
-
-    #[serde(default)]
-    pub range: Option<String>,
-
-    #[serde(default)]
+    pub severity: Severity,
     pub cwe: Vec<String>,
-
-    #[serde(default)]
-    pub cvss: Option<CvssInfo>,
+    pub cvss_score: Option<f64>,
+    pub cvss_vector: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
-pub struct CvssInfo {
-    pub score: f64,
-    #[serde(rename = "vectorString", default)]
-    pub vector_string: Option<String>,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Metrics {
+    pub total_packages: usize,
+    pub total_vulns: usize,
+    pub fixable: usize,
+    pub critical: usize,
+    pub high: usize,
+    pub moderate: usize,
+    pub low: usize,
 }

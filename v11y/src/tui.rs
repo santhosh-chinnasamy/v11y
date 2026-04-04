@@ -18,8 +18,8 @@ use ratatui::{
 };
 
 use v11y_core::{
-    model::ViaAdvisory,
-    risk::{PackageRisk, Severity},
+    model::{PackageRisk, Severity, Advisory},
+    risk,
 };
 
 pub fn run(risks: Vec<PackageRisk>) -> io::Result<()> {
@@ -82,18 +82,22 @@ impl App {
     }
 
     fn apply_filters(&mut self) {
-        self.filtered_risks = self.all_risks
-            .iter()
-            .filter(|risk| {
-                match risk.max_severity {
-                    Severity::Low => self.show_low,
-                    Severity::Moderate => self.show_moderate,
-                    Severity::High => self.show_high,
-                    Severity::Critical => self.show_critical,
-                }
-            })
-            .cloned()
-            .collect();
+        self.filtered_risks = risk::filter_risks(
+            self.all_risks.clone(),
+            Severity::Low, // Base filter, toggle logic handles individual flags
+            false,
+            false,
+        )
+        .into_iter()
+        .filter(|risk| {
+            match risk.max_severity {
+                Severity::Low => self.show_low,
+                Severity::Moderate => self.show_moderate,
+                Severity::High => self.show_high,
+                Severity::Critical => self.show_critical,
+            }
+        })
+        .collect();
 
         if self.filtered_risks.is_empty() {
             self.state.select(None);
@@ -101,7 +105,7 @@ impl App {
         } else {
             if let Some(selected) = self.state.selected() {
                 if selected >= self.filtered_risks.len() {
-                    self.state.select(Some(self.filtered_risks.len() - 1));
+                    self.state.select(Some(self.filtered_risks.len().saturating_sub(1)));
                 }
             } else {
                 self.state.select(Some(0));
@@ -219,43 +223,6 @@ fn handle_key_event(key: KeyEvent, app: &mut App) {
     }
 }
 
-struct Metrics {
-    total_packages: usize,
-    total_vulns: usize,
-    fixable: usize,
-    critical: usize,
-    high: usize,
-    moderate: usize,
-    low: usize,
-}
-
-fn compute_metrics(risks: &[PackageRisk]) -> Metrics {
-    let mut metrics = Metrics {
-        total_packages: risks.len(),
-        total_vulns: 0,
-        fixable: 0,
-        critical: 0,
-        high: 0,
-        moderate: 0,
-        low: 0,
-    };
-
-    for risk in risks {
-        metrics.total_vulns += risk.vulnerability_count;
-        if risk.has_fix {
-            metrics.fixable += 1;
-        }
-        match risk.max_severity {
-            Severity::Critical => metrics.critical += 1,
-            Severity::High => metrics.high += 1,
-            Severity::Moderate => metrics.moderate += 1,
-            Severity::Low => metrics.low += 1,
-        }
-    }
-
-    metrics
-}
-
 fn ui(f: &mut Frame, app: &mut App) {
     let main_chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -265,7 +232,7 @@ fn ui(f: &mut Frame, app: &mut App) {
     let summary_area = main_chunks[0];
     let content_area = main_chunks[1];
 
-    let metrics = compute_metrics(&app.all_risks);
+    let metrics = risk::compute_metrics(&app.all_risks);
 
     let summary_text = Line::from(vec![
         Span::from(format!(" Total Packages: {} | Total Vulns: {} | Fixable: {} ", metrics.total_packages, metrics.total_vulns, metrics.fixable)).bold(),
@@ -427,7 +394,7 @@ fn render_details(f: &mut Frame, app: &mut App, area: Rect) {
     advisory_info.push(Line::from(Span::styled(" Advisories:", Style::default().bold().underlined())));
     advisory_info.push(Line::from(""));
 
-    advisory_info.extend(formatted_advisory(selected_risk.advisory.clone()));
+    advisory_info.extend(formatted_advisories(&selected_risk.advisories));
 
     let inner_area = details_block.inner(area);
     let total_lines = count_wrapped_lines(&advisory_info, inner_area.width);
@@ -467,46 +434,48 @@ fn count_wrapped_lines(lines: &[Line], width: u16) -> usize {
     count
 }
 
-fn formatted_advisory(advisory: Option<Vec<ViaAdvisory>>) -> Vec<Line<'static>> {
-    match advisory {
-        Some(advisories) => {
-            let mut lines = Vec::new();
-            for (i, advisory) in advisories.into_iter().enumerate() {
-                if i > 0 {
-                    lines.push(Line::from("")); // Blank line between advisories
-                }
-                lines.push(Line::from(vec![
-                    Span::styled(format!("{}. ", i + 1), Style::default().bold()),
-                    Span::styled(advisory.title, Style::default().bold()),
-                ]));
-                if !advisory.cwe.is_empty() {
-                    lines.push(Line::from(vec![
-                        Span::from("   CWE: "),
-                        Span::from(advisory.cwe.join(", ")),
-                    ]));
-                }
-                if let Some(cvss) = advisory.cvss {
-                    let cvss_str = match cvss.vector_string {
-                        Some(vector) => format!("{} ({})", cvss.score, vector),
-                        None => cvss.score.to_string(),
-                    };
-                    lines.push(Line::from(vec![
-                        Span::from("   CVSS: "),
-                        Span::from(cvss_str),
-                    ]));
-                }
-                lines.push(Line::from(vec![
-                    Span::from("   URL: "),
-                    Span::styled(
-                        advisory.url,
-                        Style::default().fg(Color::Blue),
-                    ),
-                ]));
-            }
-            lines
-        }
-        None => vec![Line::from("No advisory found")],
+fn formatted_advisories(advisories: &[Advisory]) -> Vec<Line<'static>> {
+    if advisories.is_empty() {
+        return vec![Line::from("No advisory found")];
     }
+
+    let mut lines = Vec::new();
+    for (i, advisory) in advisories.iter().enumerate() {
+        if i > 0 {
+            lines.push(Line::from("")); // Blank line between advisories
+        }
+        lines.push(Line::from(vec![
+            Span::styled(format!("{}. ", i + 1), Style::default().bold()),
+            Span::styled(advisory.title.clone(), Style::default().bold()),
+        ]));
+        
+        if !advisory.cwe.is_empty() {
+            lines.push(Line::from(vec![
+                Span::from("   CWE: "),
+                Span::from(advisory.cwe.join(", ")),
+            ]));
+        }
+        
+        if let Some(score) = advisory.cvss_score {
+            let mut cvss_spans = vec![
+                Span::from("   CVSS: "),
+                Span::from(score.to_string()),
+            ];
+            if let Some(ref vector) = advisory.cvss_vector {
+                cvss_spans.push(Span::from(format!(" ({})", vector)));
+            }
+            lines.push(Line::from(cvss_spans));
+        }
+        
+        lines.push(Line::from(vec![
+            Span::from("   URL: "),
+            Span::styled(
+                advisory.url.clone(),
+                Style::default().fg(Color::Blue),
+            ),
+        ]));
+    }
+    lines
 }
 
 fn get_severity_style(severity: Severity) -> Style {
@@ -540,57 +509,5 @@ mod tests {
             get_severity_style(Severity::Low),
             Style::default().bold().fg(Color::Gray)
         );
-    }
-
-    #[test]
-    fn test_compute_metrics() {
-        let risks = vec![
-            PackageRisk {
-                name: "pkg1".to_string(),
-                is_direct: true,
-                max_severity: Severity::Critical,
-                vulnerability_count: 5,
-                has_fix: true,
-                effects: vec![],
-                range: "".to_string(),
-                nodes: vec![],
-                transitive_causes: vec![],
-                advisory: None,
-            },
-            PackageRisk {
-                name: "pkg2".to_string(),
-                is_direct: false,
-                max_severity: Severity::High,
-                vulnerability_count: 2,
-                has_fix: false,
-                effects: vec![],
-                range: "".to_string(),
-                nodes: vec![],
-                transitive_causes: vec![],
-                advisory: None,
-            },
-            PackageRisk {
-                name: "pkg3".to_string(),
-                is_direct: true,
-                max_severity: Severity::Low,
-                vulnerability_count: 1,
-                has_fix: true,
-                effects: vec![],
-                range: "".to_string(),
-                nodes: vec![],
-                transitive_causes: vec![],
-                advisory: None,
-            },
-        ];
-
-        let metrics = compute_metrics(&risks);
-
-        assert_eq!(metrics.total_packages, 3);
-        assert_eq!(metrics.total_vulns, 8);
-        assert_eq!(metrics.fixable, 2);
-        assert_eq!(metrics.critical, 1);
-        assert_eq!(metrics.high, 1);
-        assert_eq!(metrics.moderate, 0);
-        assert_eq!(metrics.low, 1);
     }
 }

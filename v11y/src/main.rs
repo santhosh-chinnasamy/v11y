@@ -1,8 +1,8 @@
 use clap::Parser;
 use color_eyre::Result;
+use v11y_core::provider::{AuditProvider, npm::NpmProvider};
 use v11y_core::risk;
 
-mod audit;
 mod cli;
 mod terminal;
 mod tui;
@@ -13,9 +13,9 @@ fn main() -> Result<()> {
     color_eyre::install()?;
     let args = Args::parse();
 
-    let audit_result = audit::npm()?;
+    let provider = NpmProvider;
+    let identified_risks = provider.audit()?;
 
-    let identified_risks = risk::build_package_risk(audit_result);
     let filtered_risks = risk::filter_risks(
         identified_risks,
         args.min_severity.into(),
