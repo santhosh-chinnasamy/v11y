@@ -145,10 +145,20 @@ fn render_list(f: &mut Frame, app: &mut App, area: Rect) {
     .height(1)
     .bottom_margin(1);
 
+    let selected_idx = app.state.selected();
+
     let rows: Vec<Row> = app
         .filtered_risks
         .iter()
-        .map(|risk| {
+        .enumerate()
+        .map(|(i, risk)| {
+            let is_selected = Some(i) == selected_idx;
+            let bg_color = if is_selected {
+                if app.active_pane == ActivePane::List { Color::Rgb(50, 50, 50) } else { Color::Rgb(40, 40, 40) }
+            } else {
+                Color::Reset
+            };
+
             let pkg_line1 = Line::from(Span::styled(risk.name.clone(), Style::default().fg(Color::White).bold()));
             let via_text = if risk.is_direct {
                 "direct dep".to_string()
@@ -159,29 +169,31 @@ fn render_list(f: &mut Frame, app: &mut App, area: Rect) {
             };
             let pkg_line2 = Line::from(Span::styled(via_text, Style::default().fg(Color::DarkGray)));
             
-            let pkg_cell = Cell::from(Text::from(vec![pkg_line1, pkg_line2]));
+            let pkg_cell = Cell::from(Text::from(vec![pkg_line1, pkg_line2])).style(Style::default().bg(bg_color));
 
             let (sev_bg, sev_fg) = get_severity_colors(risk.max_severity);
             let severity_cell = Cell::from(Line::from(vec![
                 Span::styled(format!(" {} ", risk.max_severity), Style::default().bg(sev_bg).fg(sev_fg).bold())
-            ]));
+            ])).style(Style::default().bg(bg_color));
+
+            let vulns_cell = Cell::from(risk.vulnerability_count.to_string()).style(Style::default().bg(bg_color));
 
             let direct_cell = if risk.is_direct {
-                Cell::from("✓").style(Style::default().fg(Color::Green))
+                Cell::from("✓").style(Style::default().fg(Color::Green).bg(bg_color))
             } else {
-                Cell::from(".").style(Style::default().fg(Color::DarkGray))
+                Cell::from(".").style(Style::default().fg(Color::DarkGray).bg(bg_color))
             };
             
             let fixable_cell = if risk.has_fix {
-                Cell::from("✓").style(Style::default().fg(Color::Green))
+                Cell::from("✓").style(Style::default().fg(Color::Green).bg(bg_color))
             } else {
-                Cell::from(".").style(Style::default().fg(Color::DarkGray))
+                Cell::from(".").style(Style::default().fg(Color::DarkGray).bg(bg_color))
             };
 
             Row::new(vec![
                 pkg_cell,
                 severity_cell,
-                Cell::from(risk.vulnerability_count.to_string()),
+                vulns_cell,
                 direct_cell,
                 fixable_cell,
             ]).height(2).bottom_margin(1)
@@ -199,8 +211,8 @@ fn render_list(f: &mut Frame, app: &mut App, area: Rect) {
     let table = Table::new(rows, widths)
         .header(header)
         .block(table_block)
-        .row_highlight_style(Style::default().bg(Color::Rgb(40, 40, 40)))
-        .highlight_symbol(" ");
+        .row_highlight_style(Style::default().bold())
+        .highlight_symbol(">> ");
 
     f.render_stateful_widget(table, list_chunks[0], &mut app.state);
 }
