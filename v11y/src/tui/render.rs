@@ -12,7 +12,7 @@ use super::app::{ActivePane, App};
 pub fn render(f: &mut Frame, app: &mut App) {
     let main_chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(3), Constraint::Min(0)])
+        .constraints([Constraint::Length(4), Constraint::Min(0)])
         .split(f.area());
 
     let summary_area = main_chunks[0];
@@ -35,20 +35,31 @@ pub fn render(f: &mut Frame, app: &mut App) {
 fn render_summary(f: &mut Frame, app: &mut App, area: Rect) {
     let metrics = &app.report.metrics;
 
-    let summary_text = Line::from(vec![
+    let line1 = Line::from(vec![
+        Span::styled("📦 Dependencies - ", Style::default().bold().fg(Color::Blue)),
         Span::from(format!(
-            " Total Packages: {} | Total Vulns: {} | Fixable: {} ",
-            metrics.total_packages, metrics.total_vulns, metrics.fixable
-        ))
-        .bold(),
-        Span::from(" | Severities - "),
-        Span::styled(format!(" Critical: {} ", metrics.critical), get_severity_style(Severity::Critical)),
-        Span::styled(format!(" High: {} ", metrics.high), get_severity_style(Severity::High)),
-        Span::styled(format!(" Moderate: {} ", metrics.moderate), get_severity_style(Severity::Moderate)),
-        Span::styled(format!(" Low: {} ", metrics.low), get_severity_style(Severity::Low)),
+            "Total: {} | Dev: {} | Optional: {} | Vulnerable Packages: {}  (Fixable: {})",
+            metrics.total_dependencies,
+            metrics.dev_dependencies,
+            metrics.optional_dependencies,
+            metrics.total_vulns,
+            metrics.fixable
+        )),
     ]);
 
-    let summary_paragraph = Paragraph::new(summary_text)
+    let line2 = Line::from(vec![
+        Span::styled("🚨 Vulnerabilities - ", Style::default().bold().fg(Color::Red)),
+        // Span::from(format!("Total: {} (Fixable: {}) | ", metrics.total_vulns, metrics.fixable)),
+        Span::styled(format!("Critical: {} ", metrics.critical), get_severity_style(Severity::Critical)),
+        Span::from("| "),
+        Span::styled(format!("High: {} ", metrics.high), get_severity_style(Severity::High)),
+        Span::from("| "),
+        Span::styled(format!("Moderate: {} ", metrics.moderate), get_severity_style(Severity::Moderate)),
+        Span::from("| "),
+        Span::styled(format!("Low: {} ", metrics.low), get_severity_style(Severity::Low)),
+    ]);
+
+    let summary_paragraph = Paragraph::new(vec![line1, line2])
         .block(
             Block::default()
                 .borders(Borders::ALL)

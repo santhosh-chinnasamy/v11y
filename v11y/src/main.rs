@@ -30,7 +30,7 @@ fn main() -> Result<()> {
     report.risks = risk::sort_by_priority(report.risks);
 
     if args.cli {
-        terminal::formatted_result(report.risks);
+        terminal::formatted_result(report);
     } else {
         tui::run(report)?;
     }

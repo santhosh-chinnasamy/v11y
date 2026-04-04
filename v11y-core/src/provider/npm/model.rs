@@ -172,6 +172,9 @@ pub(crate) fn build_report_from_npm(audit: NpmAudit) -> AuditReport {
     }
 
     let metrics = Metrics {
+        total_dependencies: audit.metadata.dependencies.total as usize,
+        dev_dependencies: audit.metadata.dependencies.dev as usize,
+        optional_dependencies: audit.metadata.dependencies.optional as usize,
         total_packages: risks.len(),
         total_vulns: audit.metadata.vulnerabilities.total as usize,
         fixable,

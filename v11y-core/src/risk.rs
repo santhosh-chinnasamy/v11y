@@ -48,6 +48,9 @@ pub fn filter_risks(
 
 pub fn compute_metrics(risks: &[PackageRisk]) -> Metrics {
     let mut metrics = Metrics {
+        total_dependencies: 0,
+        dev_dependencies: 0,
+        optional_dependencies: 0,
         total_packages: risks.len(),
         total_vulns: 0,
         fixable: 0,
@@ -407,6 +410,7 @@ mod tests {
 
         let metrics = compute_metrics(&risks);
 
+        assert_eq!(metrics.total_dependencies, 0);
         assert_eq!(metrics.total_packages, 3);
         assert_eq!(metrics.total_vulns, 8);
         assert_eq!(metrics.fixable, 2);
