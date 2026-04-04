@@ -8,19 +8,19 @@ use ratatui::{
     },
     Terminal,
 };
-use v11y_core::model::{PackageRisk, Severity};
+use v11y_core::model::{AuditReport, Severity};
 
 pub mod app;
 pub mod render;
 
 use app::{ActivePane, App};
 
-pub fn run(risks: Vec<PackageRisk>) -> io::Result<()> {
+pub fn run(report: AuditReport) -> io::Result<()> {
     enable_raw_mode()?;
     let _ = stdout().execute(EnterAlternateScreen);
 
     let mut terminal = Terminal::new(ratatui::backend::CrosstermBackend::new(stdout()))?;
-    let mut app = App::new(risks);
+    let mut app = App::new(report);
 
     let result = run_app(&mut terminal, &mut app);
 

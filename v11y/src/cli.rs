@@ -34,8 +34,14 @@ impl From<CliSeverity> for Severity {
     }
 }
 
-#[derive(Debug, Parser)]
-#[command(name = "v11y", version, about, author, long_about = None)]
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum PackageManager {
+    Npm,
+    Yarn,
+}
+
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
 pub struct Args {
     #[arg(long)]
     pub only_direct: bool,
@@ -48,4 +54,7 @@ pub struct Args {
 
     #[arg(long)]
     pub cli: bool,
+
+    #[arg(long)]
+    pub pm: Option<PackageManager>,
 }

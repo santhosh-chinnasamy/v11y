@@ -1,6 +1,6 @@
 use ratatui::widgets::TableState;
 use v11y_core::{
-    model::{PackageRisk, Severity},
+    model::{PackageRisk, Severity, AuditReport, Metrics},
     risk,
 };
 
@@ -11,7 +11,7 @@ pub enum ActivePane {
 }
 
 pub struct App {
-    pub all_risks: Vec<PackageRisk>,
+    pub report: AuditReport,
     pub filtered_risks: Vec<PackageRisk>,
     pub state: TableState,
     pub should_quit: bool,
@@ -25,16 +25,16 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(risks: Vec<PackageRisk>) -> Self {
+    pub fn new(report: AuditReport) -> Self {
         let mut state = TableState::default();
-        if !risks.is_empty() {
+        if !report.risks.is_empty() {
             state.select(Some(0));
         }
 
-        let filtered_risks = risks.clone();
+        let filtered_risks = report.risks.clone();
 
         Self {
-            all_risks: risks,
+            report,
             filtered_risks,
             state,
             should_quit: false,
@@ -50,7 +50,7 @@ impl App {
 
     pub fn apply_filters(&mut self) {
         self.filtered_risks = risk::filter_risks(
-            self.all_risks.clone(),
+            self.report.risks.clone(),
             Severity::Low, // Base filter, toggle logic handles individual flags
             false,
             false,

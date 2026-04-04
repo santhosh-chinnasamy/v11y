@@ -56,3 +56,9 @@ pub struct Metrics {
     pub moderate: usize,
     pub low: usize,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditReport {
+    pub risks: Vec<PackageRisk>,
+    pub metrics: Metrics,
+}

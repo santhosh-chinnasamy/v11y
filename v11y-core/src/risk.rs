@@ -76,7 +76,6 @@ pub fn compute_metrics(risks: &[PackageRisk]) -> Metrics {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::Advisory;
 
     fn sample_risks() -> Vec<PackageRisk> {
         vec![
