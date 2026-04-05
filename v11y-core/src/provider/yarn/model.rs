@@ -156,10 +156,8 @@ pub(crate) fn parse_yarn_audit(raw_output: &str) -> AuditReport {
                     nodes.insert(path.clone());
                     if !path.contains('>') {
                         is_direct = true;
-                    } else {
-                        if let Some(first) = path.split('>').next() {
-                            transitive_causes.insert(first.to_string());
-                        }
+                    } else if let Some(first) = path.split('>').next() {
+                        transitive_causes.insert(first.to_string());
                     }
                 }
             }
