@@ -66,8 +66,7 @@ fn render_summary(f: &mut Frame, app: &mut App, area: Rect) {
             "PACKAGES",
             format!(
                 "{} of {} ",
-                metrics.total_packages.to_string(),
-                metrics.total_dependencies
+                metrics.total_packages, metrics.total_dependencies
             ),
             Color::White,
         ),
