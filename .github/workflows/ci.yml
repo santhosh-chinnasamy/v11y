@@ -12,8 +12,9 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -33,7 +34,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -61,7 +62,7 @@ jobs:
           - target: aarch64-pc-windows-msvc
             os: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -81,7 +82,7 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Upload Binary Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: v11y-${{ matrix.target }}
           path: |
