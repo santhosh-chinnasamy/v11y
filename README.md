@@ -4,9 +4,18 @@ CLI / TUI tool to scan for vulnerabilities in Node projects and triage them. The
 
 It uses the `npm audit --json` or `yarn audit --json` command under the hood to perform the actual scanning.
 
+> v11y - a numeronym for "vulnerability" (v + 11 letters + y). Similar to a11y, i18n, k8s, etc.
+
 ## Installation
 
 You can download the latest pre-built binaries for your platform from the [GitHub Releases](https://github.com/santhosh-chinnasamy/v11y/releases) page.
+
+### Homebrew
+
+```bash
+brew tap santhosh-chinnasamy/tap
+brew install santhosh-chinnasamy/tap/v11y
+```
 
 ### macOS & Linux
 
