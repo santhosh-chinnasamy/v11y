@@ -69,15 +69,15 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Install Cross
-        if: matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu' }}
         uses: taiki-e/install-action@cross
 
       - name: Build Binary (Cross)
-        if: matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu' }}
         run: cross build --release --target ${{ matrix.target }}
 
       - name: Build Binary (Native)
-        if: !(matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu')
+        if: ${{ !(matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu') }}
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Upload Binary Artifact
