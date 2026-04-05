@@ -1,9 +1,6 @@
 {
   "packages": {
-    "v11y": {
-      "release-type": "rust",
-      "include-component-in-tag": false
-    }
+    "release-type": "rust"
   },
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
 }
