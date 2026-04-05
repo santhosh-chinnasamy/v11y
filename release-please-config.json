@@ -1,7 +1,4 @@
 {
-  "packages": {
-    "release-type": "rust",
-    "package-name": "v11y",
-    "path": "v11y"
-  }
+  "release-type": "rust",
+  "path": "v11y"
 }
