@@ -30,6 +30,6 @@ cargo install --path .
 ## Supports
 
 - [x] npm
-- [ ] yarn
+- [x] yarn
 - [ ] pnpm
 - [ ] bun
