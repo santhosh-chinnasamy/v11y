@@ -61,13 +61,16 @@ fn render_summary(f: &mut Frame, app: &mut App, area: Rect) {
         ])
         .split(area);
 
+    let packages_text = if metrics.total_dependencies > 0 {
+        format!("{} of {} ", metrics.total_packages, metrics.total_dependencies)
+    } else {
+        metrics.total_packages.to_string()
+    };
+
     let items = vec![
         (
             "PACKAGES",
-            format!(
-                "{} of {} ",
-                metrics.total_packages, metrics.total_dependencies
-            ),
+            packages_text,
             Color::White,
         ),
         ("CRITICAL", metrics.critical.to_string(), Color::Red),

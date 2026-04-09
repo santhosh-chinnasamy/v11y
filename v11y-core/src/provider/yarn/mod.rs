@@ -14,11 +14,31 @@ impl AuditProvider for YarnProvider {
     }
 
     fn run_audit(&self) -> Result<String> {
-        let output = Command::new("yarn")
-            .arg("audit")
-            .arg("--json")
+        let version_output = Command::new("yarn")
+            .arg("--version")
             .output()
-            .wrap_err("Failed to execute yarn audit")?;
+            .wrap_err("Failed to execute yarn --version")?;
+
+        let version = String::from_utf8_lossy(&version_output.stdout);
+
+        let output = if version.starts_with("1.") {
+            Command::new("yarn")
+                .arg("audit")
+                .arg("--json")
+                .output()
+                .wrap_err("Failed to execute yarn audit")?
+        } else {
+            Command::new("yarn")
+                .arg("npm")
+                .arg("audit")
+                // --all ensures all workspaces in a monorepo are audited (matching npm behavior)
+                .arg("--all")
+                // --recursive ensures transitive dependencies are audited (matching npm behavior)
+                .arg("--recursive")
+                .arg("--json")
+                .output()
+                .wrap_err("Failed to execute yarn npm audit")?
+        };
 
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     }
