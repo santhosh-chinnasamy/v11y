@@ -14,6 +14,7 @@ pub fn formatted_result(report: AuditReport) {
     }
     println!("🚨 Vulnerabilities - Critical: {} | High: {} | Moderate: {} | Low: {}", 
         metrics.critical, metrics.high, metrics.moderate, metrics.low);
+    println!("ℹ️  Note: Dependency counts include all transitive dependencies and monorepo workspaces.");
     println!();
 
     let mut table = Table::new();
