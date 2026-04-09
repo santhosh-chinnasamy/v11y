@@ -5,18 +5,15 @@ use v11y_core::model::AuditReport;
 pub fn formatted_result(report: AuditReport) {
     let metrics = &report.metrics;
 
-    println!(
-        "\n📦 Dependencies - Total: {} | Dev: {} | Optional: {} | Vulnerable Packages: {} (Fixable: {})",
-        metrics.total_dependencies,
-        metrics.dev_dependencies,
-        metrics.optional_dependencies,
-        metrics.total_vulns,
-        metrics.fixable
-    );
-    println!(
-        "🚨 Vulnerabilities - Critical: {} | High: {} | Moderate: {} | Low: {}",
-        metrics.critical, metrics.high, metrics.moderate, metrics.low
-    );
+    if metrics.total_dependencies > 0 {
+        println!("\n📦 Dependencies - Total: {} | Dev: {} | Optional: {} | Vulnerable Packages: {} (Fixable: {})", 
+            metrics.total_dependencies, metrics.dev_dependencies, metrics.optional_dependencies, metrics.total_vulns, metrics.fixable);
+    } else {
+        println!("\n📦 Dependencies - Vulnerable Packages: {} (Fixable: {})", 
+            metrics.total_vulns, metrics.fixable);
+    }
+    println!("🚨 Vulnerabilities - Critical: {} | High: {} | Moderate: {} | Low: {}", 
+        metrics.critical, metrics.high, metrics.moderate, metrics.low);
     println!();
 
     let mut table = Table::new();
