@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1](https://github.com/santhosh-chinnasamy/v11y/compare/v11y-v0.2.0...v11y-v0.2.1) (2026-04-09)
+
+
+### Bug Fixes
+
+* enhance terminal output and update help context for dependency counts ([1705a97](https://github.com/santhosh-chinnasamy/v11y/commit/1705a97f5d604fdcf1f6b42fac5ef591e23e2c2e))
+* improve yarn audit handling based on version ([91ecb74](https://github.com/santhosh-chinnasamy/v11y/commit/91ecb749e23d86aedc0ebd455fdc0b0bad11108e))
+
 ## [0.2.0](https://github.com/santhosh-chinnasamy/v11y/compare/v11y-v0.1.0...v11y-v0.2.0) (2026-04-05)
 
 
