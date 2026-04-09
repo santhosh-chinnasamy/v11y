@@ -131,13 +131,13 @@ fn render_list(f: &mut Frame, app: &mut App, area: Rect) {
         .borders(Borders::LEFT | Borders::RIGHT | Borders::BOTTOM | Borders::TOP)
         .border_style(Style::default().fg(Color::DarkGray));
 
-    let mut filter_spans = vec![Span::styled(" Filter  ", Style::default().fg(Color::Gray))];
+    let mut filter_spans = vec![Span::styled(" [?] help | ", Style::default().fg(Color::Gray)), Span::styled(" Filter  ", Style::default().fg(Color::Gray))];
 
     let filters = [
-        ("Critical", app.show_critical),
-        ("High", app.show_high),
-        ("Moderate", app.show_moderate),
-        ("Low", app.show_low),
+        ("[c]ritical", app.show_critical),
+        ("[h]igh", app.show_high),
+        ("[m]oderate", app.show_moderate),
+        ("[l]ow", app.show_low),
     ];
 
     for (label, active) in filters.iter() {
@@ -478,6 +478,13 @@ fn render_help(f: &mut Frame, area: Rect) {
         Line::from("  l                 : Toggle Low severities"),
         Line::from(""),
         Line::from(Span::styled(
+            "Context",
+            Style::default().bold().fg(Color::Yellow),
+        )),
+        Line::from("  Dependency counts include all transitive dependencies and"),
+        Line::from("  monorepo workspaces to ensure comprehensive security scanning."),
+        Line::from(""),
+        Line::from(Span::styled(
             "Press any key to close this help.",
             Style::default().fg(Color::DarkGray),
         )),
@@ -485,7 +492,7 @@ fn render_help(f: &mut Frame, area: Rect) {
 
     let paragraph = Paragraph::new(text).block(block);
 
-    let popup_area = centered_rect(50, 60, area);
+    let popup_area = centered_rect(60, 70, area);
     f.render_widget(Clear, popup_area); // clear background
     f.render_widget(paragraph, popup_area);
 }
