@@ -1,5 +1,6 @@
 ---
 import { Code } from "astro:components";
+import Posthog from "../components/posthog.astro";
 
 const brewInstallCode = `brew tap santhosh-chinnasamy/tap
 brew install santhosh-chinnasamy/tap/v11y`;
@@ -10,6 +11,7 @@ cargo install --path v11y`;
 
 const v11yUsageCode = `v11y # opens TUI
 v11y --cli #prints result in terminal`;
+
 ---
 
 <!doctype html>
@@ -23,6 +25,7 @@ v11y --cli #prints result in terminal`;
       name="description"
       content="A fast CLI/TUI tool to scan and triage vulnerabilities in Node.js and Yarn projects, right from your terminal."
     />
+    <Posthog />
   </head>
   <body>
     <main>
