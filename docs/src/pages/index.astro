@@ -1,0 +1,197 @@
+---
+import { Code } from "astro:components";
+
+const brewInstallCode = `brew tap santhosh-chinnasamy/tap
+brew install santhosh-chinnasamy/tap/v11y`;
+
+const gitCloneCode = `git clone https://github.com/santhosh-chinnasamy/v11y.git
+cd v11y
+cargo install --path v11y`;
+
+const v11yUsageCode = `v11y # opens TUI
+v11y --cli #prints result in terminal`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>v11y - Node.js Vulnerability Scanner</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta
+      name="description"
+      content="A fast CLI/TUI tool to scan and triage vulnerabilities in Node.js and Yarn projects, right from your terminal."
+    />
+  </head>
+  <body>
+    <main>
+      <header class="hero">
+        <h1>v11y</h1>
+        <p class="tagline">
+          Scan and triage vulnerabilities in Node.js projects — without leaving
+          your terminal.
+        </p>
+        <a
+          href="https://github.com/santhosh-chinnasamy/v11y"
+          class="cta-button"
+          target="_blank"
+          rel="noopener noreferrer">Star on GitHub</a
+        >
+      </header>
+
+      <section class="features">
+        <h2>What it does</h2>
+        <p>
+          v11y gives you a fast, focused way to find and triage security
+          vulnerabilities in your projects. It runs <code>npm audit --json</code
+          > or <code>yarn audit --json</code> under the hood and surfaces the results
+          in an interactive terminal UI — so you can act on issues instead of scrolling
+          through raw JSON.
+        </p>
+        <ul>
+          <li>Interactive Terminal User Interface (TUI)</li>
+          <li>
+            Works with both <code>npm audit</code> and <code>yarn audit</code>
+          </li>
+          <li>Filter vulnerabilities by severity</li>
+          <li>
+            Streamlined triage flow designed to reduce noise and cognitive load
+          </li>
+        </ul>
+      </section>
+
+      <section class="installation">
+        <h2>Installation</h2>
+
+        <h3>Homebrew</h3>
+        <Code code={brewInstallCode} lang="shell" theme={"laserwave"} />
+
+        <h3>Build from source</h3>
+        <Code code={gitCloneCode} lang="shell" theme={"laserwave"} />
+      </section>
+
+      <section class="usage">
+        <h2>Usage</h2>
+        <p>
+          Run the following command in the root of your Node.js project (where <code
+            >package-lock.json</code
+          > or <code>yarn.lock</code> is located):
+        </p>
+        <Code code={v11yUsageCode} lang="shell" theme={"laserwave"} />
+      </section>
+    </main>
+
+    <footer>
+      <p>Built with Rust and Astro.</p>
+      <p>
+        <a
+          href="https://github.com/santhosh-chinnasamy/v11y"
+          target="_blank"
+          rel="noopener noreferrer">GitHub Repository</a
+        >
+      </p>
+    </footer>
+  </body>
+</html>
+
+<style>
+  :root {
+    --primary: #ff4081;
+    --bg: #1e1e1e;
+    --text: #e0e0e0;
+    --code-bg: #2d2d2d;
+    --link: #80cbc4;
+  }
+  body {
+    font-family:
+      system-ui,
+      -apple-system,
+      sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+  }
+  main {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+  .hero {
+    text-align: center;
+    padding: 4rem 0;
+    border-bottom: 1px solid #333;
+  }
+  h1 {
+    font-size: 4rem;
+    margin: 0;
+    color: var(--primary);
+  }
+  .tagline {
+    font-size: 1.5rem;
+    color: #b0b0b0;
+    margin-bottom: 2rem;
+  }
+  .cta-button {
+    display: inline-block;
+    background-color: var(--primary);
+    color: #fff;
+    padding: 0.8rem 1.5rem;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: background-color 0.2s;
+  }
+  .cta-button:hover {
+    background-color: #e91e63;
+  }
+  section {
+    margin: 3rem 0;
+  }
+  h2 {
+    color: #fff;
+    border-bottom: 2px solid var(--primary);
+    display: inline-block;
+    padding-bottom: 0.5rem;
+  }
+  h3 {
+    color: #ccc;
+    margin-top: 1.5rem;
+  }
+  pre {
+    background-color: var(--code-bg);
+    padding: 1rem;
+    border-radius: 8px;
+    overflow-x: auto;
+  }
+  code {
+    font-family: "Courier New", Courier, monospace;
+    background-color: var(--code-bg);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+  }
+  pre code {
+    padding: 0;
+    background-color: transparent;
+  }
+  ul {
+    list-style-type: square;
+    padding-left: 1.5rem;
+  }
+  a {
+    color: var(--link);
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+  footer {
+    text-align: center;
+    padding: 2rem;
+    border-top: 1px solid #333;
+    margin-top: 4rem;
+    color: #888;
+  }
+</style>
