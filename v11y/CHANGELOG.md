@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/santhosh-chinnasamy/v11y/compare/v11y-v0.2.1...v11y-v0.2.2) (2026-04-15)
+
+
+### Bug Fixes
+
+* improve error handling in audit providers and update detect_provider return type ([07fbc48](https://github.com/santhosh-chinnasamy/v11y/commit/07fbc48782c5ce39542fcd6c57c648ebd130cf71))
+
 ## [0.2.1](https://github.com/santhosh-chinnasamy/v11y/compare/v11y-v0.2.0...v11y-v0.2.1) (2026-04-09)
 
 
