@@ -40,12 +40,41 @@ impl AuditProvider for YarnProvider {
                 .wrap_err("Failed to execute yarn npm audit")?
         };
 
+        if !output.status.success() && output.stdout.is_empty() {
+            return Err(eyre!("yarn audit failed: {}", String::from_utf8_lossy(&output.stderr)));
+        }
+
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     }
 
     fn parse(&self, raw_output: &str) -> Result<AuditReport> {
         if raw_output.trim().is_empty() {
             return Err(eyre!("yarn audit produced empty output"));
+        }
+
+        let mut parsed_any_json = false;
+
+        for line in raw_output.lines() {
+            if line.trim().is_empty() {
+                continue;
+            }
+            if let Ok(value) = serde_json::from_str::<serde_json::Value>(line) {
+                parsed_any_json = true;
+                if value.get("type").and_then(|t| t.as_str()) == Some("error") {
+                    if let Some(data) = value.get("data").and_then(|d| d.as_str()) {
+                        return Err(eyre!("yarn audit failed: {}", data));
+                    }
+                }
+            }
+        }
+
+        if serde_json::from_str::<serde_json::Value>(raw_output).is_ok() {
+            parsed_any_json = true;
+        }
+
+        if !parsed_any_json {
+            // For Yarn v2+ which outputs plain text errors to stdout (like Usage Error)
+            return Err(eyre!("yarn audit failed: {}", raw_output.trim()));
         }
 
         Ok(parse_yarn_audit(raw_output))

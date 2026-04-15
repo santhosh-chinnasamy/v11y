@@ -16,7 +16,7 @@ fn main() -> Result<()> {
     let provider: Box<dyn AuditProvider> = match args.pm {
         Some(PackageManager::Npm) => Box::new(NpmProvider),
         Some(PackageManager::Yarn) => Box::new(YarnProvider),
-        None => detect_provider(),
+        None => detect_provider()?,
     };
 
     let mut report = provider.audit()?;

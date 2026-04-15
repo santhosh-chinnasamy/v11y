@@ -1,5 +1,5 @@
 use crate::model::AuditReport;
-use color_eyre::Result;
+use color_eyre::eyre::{eyre, Result};
 use std::path::Path;
 
 pub mod npm;
@@ -22,13 +22,17 @@ pub trait AuditProvider {
     }
 }
 
-pub fn detect_provider() -> Box<dyn AuditProvider> {
+pub fn detect_provider() -> Result<Box<dyn AuditProvider>> {
     if Path::new("yarn.lock").exists() {
-        Box::new(yarn::YarnProvider)
+        Ok(Box::new(yarn::YarnProvider))
     } else if Path::new("package-lock.json").exists() {
-        Box::new(npm::NpmProvider)
+        Ok(Box::new(npm::NpmProvider))
+    } else if Path::new("package.json").exists() {
+        // Fallback to npm if there's a package.json but no lockfile
+        Ok(Box::new(npm::NpmProvider))
     } else {
-        // Fallback to npm
-        Box::new(npm::NpmProvider)
+        Err(eyre!(
+            "No package.json, package-lock.json, or yarn.lock found. Please run v11y in a Node.js project directory, or explicitly specify the package manager using --pm."
+        ))
     }
 }
